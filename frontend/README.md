@@ -30,7 +30,8 @@ Example response shape (question text varies):
 `Prompt/InterviewQuestion` template. The system prompt asks for exactly one question
 without an answer or hints. This is a model instruction, not a guarantee about
 provider output. Empty results and provider errors return 502; invalid inputs
-return 400. Question calls override the shared 100-token limit with 500 tokens.
+return 400. Question and chat calls use the model, temperature, and 1000-token limit set in
+`ChatOptionsConfig`.
 
 The UI renders output as text, disables duplicate submissions, and offers
 cancellation, timeout handling, and retries. Browser cancellation does not cancel

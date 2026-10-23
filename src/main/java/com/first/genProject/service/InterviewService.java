@@ -6,7 +6,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -40,7 +39,6 @@ public class InterviewService {
         final String question;
         try {
             question = chatClient.prompt(prompt)
-                    .options(OpenAiChatOptions.builder().temperature(0.5).maxTokens(500))
                     .call().content();
         } catch (RuntimeException exception) {
             throw new AiProviderException(exception);

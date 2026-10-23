@@ -19,7 +19,6 @@ class AIServiceImplTest {
         assertEquals("Stub response", service.chat(code));
         assertEquals(code, model.prompt.getUserMessage().getText().trim());
         assertTrue(model.prompt.getSystemMessage().getText().contains("Java coding assistant"));
-        assertEquals(1000, model.prompt.getOptions().getMaxTokens());
     }
 
     @ParameterizedTest

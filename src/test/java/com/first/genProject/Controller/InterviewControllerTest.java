@@ -49,7 +49,6 @@ class InterviewControllerTest {
         assertTrue(user.contains("intermediate"));
         assertFalse(user.contains("{topic}"));
         assertTrue(model.prompt.getSystemMessage().getText().contains("exactly one"));
-        assertEquals(500, model.prompt.getOptions().getMaxTokens());
     }
 
     @ParameterizedTest

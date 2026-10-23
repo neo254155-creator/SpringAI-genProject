@@ -5,7 +5,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +36,6 @@ public class AIServiceImpl implements AiService {
         final String response;
         try {
             response = chatClient.prompt(prompt)
-                    .options(OpenAiChatOptions.builder().temperature(0.2).maxTokens(1000))
                     .call().content();
         } catch (RuntimeException exception) {
             throw new AiProviderException(exception);

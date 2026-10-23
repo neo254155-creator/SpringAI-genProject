@@ -117,3 +117,24 @@ question-selection milestone above.
 6. Fixed-answer scoring evaluation and citation-support evaluation.
 
 Commit message for this milestone: `Fix chat foundation`
+
+## Configuration follow-up — Use the configured model
+
+1. Fixed an unfinished method-chain dot in `ChatOptionsConfig`.
+2. Made the shared ChatClient explicitly read `spring.ai.openai.chat.model` and
+   pass it to `.model(model)`. The existing property defaults to
+   `openai/gpt-oss-120b` and supports the `GROQ_MODEL` environment override.
+3. A regression test found that per-request option builders replaced the shared
+   client options. Removed those overrides from both services so configuration is
+   applied consistently. Both now use temperature 0.2 and a 1000-token output
+   budget from `ChatOptionsConfig`, replacing the earlier per-service budgets.
+4. Added a test that inspects the actual prompts sent to a stub model by both
+   services and checks the configured model and token budget.
+
+A model name does not supply authentication: real calls still require
+`GROQ_API_KEY`. No live provider call was made for this change.
+
+Commit message: `Use shared model configuration`
+
+Verification: `./mvnw -o test -q` passed all 35 offline tests, including the shared
+model configuration regression test. `git diff --check` passed.

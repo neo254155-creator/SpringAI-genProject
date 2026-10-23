@@ -13,6 +13,8 @@ Provide `GROQ_API_KEY` in your environment, then run:
 ```
 
 `GROQ_MODEL` optionally overrides the configured `openai/gpt-oss-120b` model.
+`ChatOptionsConfig` reads that model property and sets shared defaults for both
+chat and interview calls: temperature 0.2 and a 1000-token output budget.
 The configured provider base URL is `https://api.groq.com/openai/v1`.
 Open `http://localhost:8080/` for the existing question-selection screen.
 
