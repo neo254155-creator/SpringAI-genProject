@@ -5,7 +5,7 @@ limitations. Use a short, meaningful commit message for each milestone and push 
 to the configured GitHub remote. Report a push as successful only after Git confirms
 it; keep planned features separate from implemented features.
 
-## Step 1 — Select a focus and request an interview question
+## Earlier milestone — Select a focus and request an interview question
 
 Implemented on 2026-10-23.
 
@@ -64,3 +64,56 @@ question**.
 Suggested next milestone: answer submission and rubric-based feedback.
 
 Commit message for this milestone: `Add interview question flow`
+
+
+## Revised build order — Step 1: Fix the foundation
+
+Implemented on 2026-10-23. This follows the revised build order requested after the
+question-selection milestone above.
+
+### Changes, step by step
+
+1. Replaced the hard-coded `ChatTemplate()` service contract with `chat(message)`.
+   `GET /chat?q=...` returns text; new `POST /chat` accepts a JSON `message` and
+   returns a JSON `content` field. Calling GET without `q` now returns 400.
+2. Fixed classpath resource casing and loaded both prompt files from `Prompt/`.
+   The user template now accepts the actual message instead of fixed Spring values.
+   Chat calls use a 1000-token output budget.
+3. Added service-level validation for blank messages and messages longer than
+   8000 Java string characters. Tests cover the length boundary and Java code
+   containing braces in prompt input.
+4. Added explicit invalid-input and AI-provider exceptions. Centralized HTTP
+   error handling into problem responses with safe descriptions. Application
+   errors use 400, 502, or 500 as appropriate; Spring MVC retains protocol errors
+   such as 405 and 415. Empty AI responses count as provider failures.
+5. Applied the same provider boundary and error contract to the existing interview
+   endpoint. Updated the frontend to read the problem response's `detail` field.
+6. Aligned controller tests with GET and POST chat input. Added offline service
+   tests using an in-memory ChatModel stub; no provider requests occur in the
+   default suite.
+7. Added `GroqLiveTest`, tagged `live`, excluded from normal tests. The
+   `live-groq` Maven profile selects live tests only. The test requires a nonblank
+   `GROQ_API_KEY` and otherwise skips before creating its Spring context.
+8. Added root README instructions for input, error responses, environment setup,
+   and separate offline/live test commands.
+
+### Verification
+
+- Offline suite: 34 tests passed with no failures or errors.
+- JavaScript syntax and `git diff --check` passed.
+- `env -u GROQ_API_KEY ./mvnw -o -Plive-groq test -q`: only the live test
+  was selected, and it was skipped because credentials were absent (1 skipped,
+  no failures or errors).
+- No real Groq request or browser rendering verification was performed. Stub tests
+  verify API behavior and prompt construction, not model answer quality.
+
+### Remaining revised steps — not implemented by this milestone
+
+2. Complete topic → question → answer → structured feedback flow.
+3. PostgreSQL users, sessions, questions, answers, and feedback.
+4. Document search with citations and an embedding model; pgvector is an option.
+5. Extend the existing basic frontend with interview, history, and progress screens;
+   add Docker and deployment.
+6. Fixed-answer scoring evaluation and citation-support evaluation.
+
+Commit message for this milestone: `Fix chat foundation`

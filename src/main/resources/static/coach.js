@@ -7,7 +7,7 @@ export async function requestQuestion(selection, { signal } = {}) {
     signal,
   });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'Could not generate a question. Please try again.');
+  if (!response.ok) throw new Error(result.detail || result.error || 'Could not generate a question. Please try again.');
   if (typeof result.question !== 'string' || !result.question.trim()) {
     throw new Error('No question was returned. Please try again.');
   }

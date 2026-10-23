@@ -21,7 +21,7 @@ import com.first.genProject.dto.InterviewSelection;
 class InterviewControllerTest {
     private final StubModel model = new StubModel();
     private final InterviewService service = new InterviewService(ChatClient.create(model));
-    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new InterviewController(service)).build();
+    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new InterviewController(service)).setControllerAdvice(new ApiExceptionHandler()).build();
     private static final String SELECTION = """
             {"track":"Java","topic":"Spring Boot","level":"intermediate"}
             """;
@@ -78,7 +78,7 @@ class InterviewControllerTest {
         model.fail = true;
         mvc.perform(post("/interview/questions").contentType(MediaType.APPLICATION_JSON).content(SELECTION))
                 .andExpect(status().isBadGateway())
-                .andExpect(jsonPath("$.error").value("Could not generate a question. Please try again."));
+                .andExpect(jsonPath("$.code").value("AI_PROVIDER_ERROR"));
     }
 
     @Test

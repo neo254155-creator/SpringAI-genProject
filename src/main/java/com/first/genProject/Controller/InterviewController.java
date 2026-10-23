@@ -3,8 +3,6 @@ package com.first.genProject.Controller;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.*;
 
 import com.first.genProject.dto.InterviewQuestion;
@@ -32,18 +30,4 @@ public class InterviewController {
         return interviewService.generateQuestion(selection);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> invalidSelection(IllegalArgumentException exception) {
-        return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
-    }
-
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Map<String, String>> invalidBody() {
-        return ResponseEntity.badRequest().body(Map.of("error", "A valid JSON selection is required"));
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> providerFailure() {
-        return ResponseEntity.status(502).body(Map.of("error", "Could not generate a question. Please try again."));
-    }
 }

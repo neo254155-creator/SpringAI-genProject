@@ -10,6 +10,8 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import com.first.genProject.exception.AiProviderException;
+import com.first.genProject.exception.InvalidInputException;
 import com.first.genProject.dto.InterviewQuestion;
 import com.first.genProject.dto.InterviewSelection;
 
@@ -25,7 +27,7 @@ public class InterviewService {
 
     public InterviewQuestion generateQuestion(InterviewSelection selection) {
         if (selection == null) {
-            throw new IllegalArgumentException("Interview selection is required");
+            throw new InvalidInputException("Interview selection is required");
         }
         selection.validate();
         var userMessage = questionTemplate.createMessage(Map.of(
@@ -35,11 +37,16 @@ public class InterviewService {
                 Return only the question text, without a heading, answer, hint, explanation,
                 scoring rubric, or additional questions. Use plain text.
                 """), userMessage);
-        String question = chatClient.prompt(prompt)
-                .options(OpenAiChatOptions.builder().temperature(0.5).maxTokens(500))
-                .call().content();
+        final String question;
+        try {
+            question = chatClient.prompt(prompt)
+                    .options(OpenAiChatOptions.builder().temperature(0.5).maxTokens(500))
+                    .call().content();
+        } catch (RuntimeException exception) {
+            throw new AiProviderException(exception);
+        }
         if (question == null || question.isBlank()) {
-            throw new IllegalStateException("The provider returned an empty question");
+            throw new AiProviderException();
         }
         return new InterviewQuestion(selection.track(), selection.topic(), selection.level(), question.trim());
     }
