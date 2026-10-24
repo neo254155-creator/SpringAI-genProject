@@ -1,6 +1,11 @@
-Ask one {level} interview question for the {track} track, focused on {topic}.
-For beginner level, test one foundational concept.
-For intermediate level, test practical application through a short realistic scenario.
-For advanced level, test a design tradeoff or subtle production behavior.
-Make the question self-contained and answerable verbally in about two minutes.
-Do not ask multiple subquestions. Do not provide the answer.
+Generate an interview question using this selection:
+Track: {track}
+Topic: {topic}
+Difficulty: {level}
+
+Use the rule matching the selected difficulty:
+- beginner: test one foundational concept using familiar terminology.
+- intermediate: test practical application through a short realistic scenario.
+- advanced: test a design tradeoff or subtle production behavior.
+
+Ask only the question. Do not provide its answer.

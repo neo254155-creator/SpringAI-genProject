@@ -6,11 +6,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import com.first.genProject.service.AiService;
 
 /** Explicit opt-in: ./mvnw -Plive-groq test. Uses real provider credits. */
 @Tag("live")
 @EnabledIfEnvironmentVariable(named = "GROQ_API_KEY", matches = "\\S+")
+@ActiveProfiles("test")
+@TestPropertySource(locations = "classpath:application-test.properties")
 @SpringBootTest(properties = {
         "spring.ai.openai.base-url=https://api.groq.com/openai/v1",
         "spring.ai.openai.api-key=${GROQ_API_KEY}",

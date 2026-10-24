@@ -1,5 +1,6 @@
 package com.first.genProject.Controller;
 
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,12 +19,13 @@ public class AIController {
         this.aiService = aiService;
     }
 
-    @GetMapping("/chat")
+    @GetMapping(value = "/chat", produces = MediaType.TEXT_PLAIN_VALUE)
     public String chat(@RequestParam("q") String query) {
         return aiService.chat(query);
     }
 
-    @PostMapping("/chat")
+    @PostMapping(value = "/chat", consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     public ChatResponse chat(@RequestBody ChatRequest request) {
         return new ChatResponse(aiService.chat(request.message()));
     }

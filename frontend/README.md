@@ -1,6 +1,7 @@
 # Interview practice — first milestone
 
-Start the existing Spring Boot application with `./mvnw spring-boot:run`, then open
+Start PostgreSQL using the setup in `PERSISTENCE.md`. Run the Spring Boot
+application with `./mvnw spring-boot:run`, then open
 `http://localhost:8080/`. Configure your existing AI provider credentials first.
 
 Choose Java, a topic (Core Java or Spring Boot), and a level (beginner,
@@ -27,7 +28,8 @@ Example response shape (question text varies):
 ```
 
 `InterviewService.generateQuestion` validates selections and renders the classpath
-`Prompt/InterviewQuestion` template. The system prompt asks for exactly one question
+`Prompt/InterviewQuestion` template. The interviewer instructions are loaded from
+`Prompt/InterviewSystem`. The API field `level` represents difficulty. The system prompt asks for exactly one question
 without an answer or hints. This is a model instruction, not a guarantee about
 provider output. Empty results and provider errors return 502; invalid inputs
 return 400. Question and chat calls use the model, temperature, and 1000-token limit set in
@@ -37,9 +39,13 @@ The UI renders output as text, disables duplicate submissions, and offers
 cancellation, timeout handling, and retries. Browser cancellation does not cancel
 an already-running provider call. No frontend build or browser API key is needed.
 
-This milestone is stateless. Answers, rubric-based feedback, adaptive questions,
-persisted sessions, dashboard progress, résumé extraction, document citations,
-conversation memory, and controlled study-task tools are future steps.
+The backend now accepts answers at `POST /interview/feedback` and returns typed
+rubric feedback; see the root README. This frontend still displays questions only.
+This screen still uses the original stateless question endpoint. New session APIs
+save questions, answers, and feedback and expose progress summaries; see
+`PERSISTENCE.md`. Connecting this UI to stored sessions, adding history/progress
+views, adaptive questions, résumé extraction, document citations, conversation
+memory, and controlled study-task tools remain future steps.
 
 Run `./mvnw test` for automated backend checks. Question tests use a local stub
 model and do not contact the AI provider. The old controller test was updated to

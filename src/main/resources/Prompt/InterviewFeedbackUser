@@ -1,0 +1,10 @@
+Evaluate the candidate's answer for this interview selection:
+Track: {track}
+Topic: {topic}
+Difficulty: {level}
+
+Question:
+{question}
+
+Candidate answer:
+{answer}

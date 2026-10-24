@@ -57,7 +57,7 @@ export class JavaInterviewCoach extends HTMLElement {
           <h2>Your question</h2>
           <p id="selection"></p>
           <p id="question"></p>
-          <p>Take your time and explain your reasoning. Answer submission and scoring are coming in the next step.</p>
+          <p>Take your time and practise your answer aloud. This screen currently shows questions only.</p>
         </section>
       </main>`;
     this.shadowRoot.querySelector('form').addEventListener('submit', event => {
