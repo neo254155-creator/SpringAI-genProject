@@ -367,3 +367,54 @@ Configuration regression check: `env -u GROQ_API_KEY ./mvnw -o
 -Dtest=GenProjectApplicationTests test -q` passed all 10 application-context tests
 using H2 and a local AI stub. This does not verify the Windows setup script or an
 actual PostgreSQL connection.
+
+## Database inspection request and Neon compatibility — 2026-10-25
+
+The user reported running the setup script successfully. The project now has an
+ignored `.local/database.properties` pointing to InterviewData with the genproject
+login and a nonempty password. Password contents were not displayed.
+
+Attempted live inspection through localhost TCP and PostgreSQL's Unix socket.
+This execution environment denied both with Operation not permitted. The Linux
+PostgreSQL cluster utility reports 18/main as down; this does not determine the
+state of the Windows PostgreSQL server. Therefore the saved connection file and
+user report are not being presented as independently verified table creation.
+
+Added `scripts/check-local-database.sql`, a read-only inspection for execution in
+the user's terminal. It requires InterviewData, the six app tables and Flyway
+history, validates all V1 column names/types/nullability, checks successful V1
+history, and reports actual constraints, indexes, and row counts. It inserts no
+data and runs no migration. Constraint definitions are reported for review; it
+does not claim to automatically verify every definition. The script has not been
+executed against the real database in this environment.
+
+Neon compatibility was checked against official documentation:
+https://neon.com/docs/guides/java
+https://neon.com/docs/get-started/connect-neon
+The project already uses PostgreSQL JDBC/JPA and Flyway. Neon can be selected
+through DB_URL (a JDBC URL with SSL), DB_USER, and DB_PASSWORD. This is a compatible
+configuration path, not a tested Neon deployment; no database switch was made.
+No commit or push was made.
+
+## Vercel container build — 2026-10-25
+
+1. Checked current official Vercel documentation: container deployments are
+   supported, including Spring Boot. The detected filename is Dockerfile.vercel,
+   so that spelling is used instead of the requested Dockerfile.versel.
+2. Added Dockerfile.vercel with a Java 21 Maven-wrapper build stage and Java 21
+   runtime stage running as a non-root user. Packaging skips tests.
+3. Added server.port=${PORT:8080} so the application follows the container port
+   while retaining port 8080 as its local default. The image defaults PORT to 8080.
+4. Added an allowlist-based .dockerignore that excludes local credentials, Git
+   history, existing build artifacts, and installers from the build context.
+5. Added VERCEL.md with deployment instructions and required environment settings.
+   Hosted PostgreSQL credentials and a Groq key must be configured in Vercel;
+   this change does not migrate the local database or set remote secrets.
+
+Verification: ./mvnw -o -B -DskipTests package succeeded and git diff --check
+passed. Tests were skipped. Docker is not installed in this execution environment,
+so the container build and deployed startup have not been tested. No deployment,
+commit, or push was performed.
+
+Sources: https://vercel.com/kb/guide/does-vercel-support-docker-deployments
+and https://vercel.com/blog/dockerfile-on-vercel.

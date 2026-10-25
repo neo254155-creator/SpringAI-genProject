@@ -1,0 +1,10 @@
+# Only send the files needed to build the application.
+**
+!Dockerfile.vercel
+!.dockerignore
+!pom.xml
+!mvnw
+!.mvn/
+!.mvn/**
+!src/
+!src/**
