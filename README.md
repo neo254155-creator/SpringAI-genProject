@@ -11,6 +11,8 @@ The application now requires PostgreSQL. See [PERSISTENCE.md](PERSISTENCE.md) fo
 local `InterviewData` database setup, stored-session APIs, and progress queries.
 The Windows setup script is `scripts/setup-local-postgres.ps1`; it creates the
 database and runs migrations without requiring a Groq key.
+To check the actual database and configured AI providers without database writes,
+run `python3 scripts/verify-live-connections.py`; see [LIVE_VERIFICATION.md](LIVE_VERIFICATION.md).
 
 Provide `GROQ_API_KEY` in your environment, then run:
 
@@ -22,7 +24,9 @@ Provide `GROQ_API_KEY` in your environment, then run:
 `ChatOptionsConfig` reads that model property and sets shared defaults for both
 chat and interview calls: temperature 0.2 and a 1000-token output budget.
 The configured provider base URL is `https://api.groq.com/openai/v1`.
-Open `http://localhost:8080/` for the existing question-selection screen.
+Open `http://localhost:8080/` for the new landing page, `/practice.html` for interviews,
+and `/dashboard.html` for saved statistics. See [frontend/README.md](frontend/README.md)
+for the full frontend and [frontend/VERIFICATION.md](frontend/VERIFICATION.md) for verification limits.
 
 ## Chat input
 
@@ -48,6 +52,10 @@ also runs when the service is called directly. User content is substituted into
 
 The existing interview APIs remain `GET /interview/options` and
 `POST /interview/questions`. See [frontend/README.md](frontend/README.md).
+The frontend uses saved-session routes. Open `/history.html` for previous
+questions, answers, rubric feedback, topic progress, and session resume.
+Saved-session next questions now use the latest feedback to choose a practice
+focus; see [ADAPTIVE_INTERVIEWS.md](ADAPTIVE_INTERVIEWS.md).
 
 ## Structured interview feedback
 
@@ -98,8 +106,8 @@ invalid requests return 400. The shared model configuration also applies here.
 Spring AI's `BeanOutputConverter<FeedbackEvaluation>` supplies the JSON schema in
 the system prompt and converts the model response into Java records. This does
 not guarantee scoring quality or resistance to instructions inside an answer;
-real-model evaluation remains future work. The frontend currently shows questions
-only; feedback is available through the API. The original question/feedback routes
+real-model evaluation remains future work. The frontend now supports saved sessions,
+answer submission, feedback, next questions, and session completion. The original question/feedback routes
 are stateless. Use the new session APIs
 in [PERSISTENCE.md](PERSISTENCE.md) to save questions, answers, and feedback.
 

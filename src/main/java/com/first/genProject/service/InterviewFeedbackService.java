@@ -41,6 +41,19 @@ public class InterviewFeedbackService {
             throw new InvalidInputException("Answer request is required");
         }
         request.validate();
+        return evaluate(request);
+    }
+
+    public InterviewFeedback evaluateResumeAnswer(String skill, String level, String question, String answer) {
+        if (skill == null || skill.isBlank() || skill.length() > 80
+                || !com.first.genProject.dto.InterviewSelection.LEVELS.contains(level)
+                || question == null || question.isBlank() || question.length() > 2000
+                || answer == null || answer.isBlank() || answer.length() > 8000)
+            throw new InvalidInputException("Invalid resume interview answer context.");
+        return evaluate(new InterviewAnswerRequest("Resume", skill, level, question, answer));
+    }
+
+    private InterviewFeedback evaluate(InterviewAnswerRequest request) {
         var system = systemTemplate.createMessage(Map.of("format", converter.getFormat()));
         var user = userTemplate.createMessage(Map.of(
                 "track", request.track(), "topic", request.topic(), "level", request.level(),

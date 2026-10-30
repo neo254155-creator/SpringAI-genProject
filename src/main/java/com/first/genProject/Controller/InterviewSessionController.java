@@ -35,6 +35,9 @@ public class InterviewSessionController {
     @GetMapping("/sessions/{id}")
     public SessionResponse session(@PathVariable UUID id) { return store.session(id); }
 
+    @GetMapping("/sessions/{id}/resume")
+    public SessionResumeResponse resume(@PathVariable UUID id) { return store.resume(id); }
+
     @PostMapping("/sessions/{id}/questions")
     @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
     public StoredQuestionResponse generateQuestion(@PathVariable UUID id) {

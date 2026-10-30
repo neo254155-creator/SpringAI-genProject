@@ -15,6 +15,14 @@ import com.first.genProject.exception.InvalidInputException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+    @ExceptionHandler(com.first.genProject.exception.DocumentSearchException.class)
+    public ProblemDetail documentSearchFailure(com.first.genProject.exception.DocumentSearchException exception) {
+        return switch (exception.getReason()) {
+            case DISABLED -> problem(HttpStatus.SERVICE_UNAVAILABLE, "EMBEDDINGS_UNAVAILABLE", exception.getMessage());
+            case PROVIDER_FAILURE -> problem(HttpStatus.BAD_GATEWAY, "EMBEDDING_PROVIDER_ERROR", exception.getMessage());
+            case INDEX_NOT_READY -> problem(HttpStatus.CONFLICT, "DOCUMENT_INDEX_NOT_READY", exception.getMessage());
+        };
+    }
     @ExceptionHandler(InvalidInputException.class)
     public ProblemDetail invalidInput(InvalidInputException exception) {
         return problem(HttpStatus.BAD_REQUEST, "INVALID_INPUT", exception.getMessage());

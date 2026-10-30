@@ -42,18 +42,185 @@ abstract class InterviewPersistenceContract {
     @Autowired InterviewSessionService service;
     @Autowired InterviewHistoryStore store;
     @Autowired TransactionCheckingModel model;
+    @Autowired com.first.genProject.resume.ResumeService resumeService;
     private final JsonMapper json = JsonMapper.builder().build();
 
     @BeforeEach
     void cleanDatabase() {
         for (String table : new String[] {"feedback_correct_points", "feedback_missing_points",
-                "interview_feedback", "interview_answers", "interview_questions", "interview_sessions"}) {
+                "interview_feedback", "interview_answers", "interview_questions", "interview_sessions", "resume_profiles"}) {
             jdbc.update("delete from " + table);
         }
         model.calls = 0;
         model.failure = null;
         model.beforeReply = null;
         model.response = "How does dependency injection work?";
+    }
+
+    @Test
+    void resumeExtractionConfirmationInterviewFeedbackAndSkillProgressWorkTogether() throws Exception {
+        model.response = """
+                {"skills":[{"name":"Python","evidence":"Built tools with Python."},
+                {"name":"PostgreSQL","evidence":"Used PostgreSQL for storage."}]}
+                """;
+        String body = mvc.perform(post("/resumes/text").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"text\":\"Built tools with Python. Used PostgreSQL for storage.\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.skills[0].name").value("Python"))
+                .andReturn().getResponse().getContentAsString();
+        UUID resumeId = UUID.fromString(json.readTree(body).get("id").asString());
+        String sessionBody = mvc.perform(post("/resumes/{id}/sessions", resumeId).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skills\":[\"Python\",\"PostgreSQL\"],\"level\":\"intermediate\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.resume.skills.length()").value(2))
+                .andReturn().getResponse().getContentAsString();
+        UUID sessionId = UUID.fromString(json.readTree(sessionBody).get("id").asString());
+        model.response = "How does a Python generator evaluate values lazily?";
+        var first = service.generateQuestion(sessionId);
+        assertEquals("Python", first.skill());
+        assertTrue(model.prompt.getUserMessage().getText().contains("Built tools with Python."));
+        assertFalse(model.prompt.getSystemMessage().getText().contains("Java technical interviewer"));
+        model.response = VALID_FEEDBACK.replace("Explain constructor injection", "Explain lazy iteration");
+        service.submitAnswer(first.id(), new AnswerSubmission("A generator yields values when requested."));
+        assertTrue(model.prompt.getUserMessage().getText().contains("Topic: Python"));
+        model.response = "Explain how you would describe yield to a teammate.";
+        var followUp = service.generateQuestion(sessionId);
+        assertEquals("Python", followUp.skill());
+        assertEquals("clarity", followUp.focus().criterion());
+        model.response = VALID_FEEDBACK.replace("\"score\": 4", "\"score\": 5")
+                .replace("\"score\": 2", "\"score\": 3").replace("\"score\": 1", "\"score\": 2");
+        service.submitAnswer(followUp.id(), new AnswerSubmission("A clear, complete explanation."));
+        model.response = "When would you add an index in PostgreSQL?";
+        assertEquals("PostgreSQL", service.generateQuestion(sessionId).skill());
+        mvc.perform(get("/interview/sessions/{id}/resume", sessionId))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.session.resume.resumeId").value(resumeId.toString()))
+                .andExpect(jsonPath("$.question.skill").value("PostgreSQL"));
+        mvc.perform(get("/interview/progress")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].topic").value("Python"));
+        store.complete(sessionId);
+        assertThrows(InterviewStateException.class, () -> service.generateQuestion(sessionId));
+    }
+
+    @Test
+    void fabricatedExtractionAndUnconfirmedSkillsCannotStartAnInterview() throws Exception {
+        model.response = "{\"skills\":[{\"name\":\"Kubernetes\",\"evidence\":\"Used Kubernetes\"}]}";
+        mvc.perform(post("/resumes/text").contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"I use Python\"}"))
+                .andExpect(status().isBadGateway());
+        assertEquals(0L, jdbc.queryForObject("select count(*) from resume_profiles", Long.class));
+        model.response = "{\"skills\":[{\"name\":\"Python\",\"evidence\":\"I use Python\"}]}";
+        var profile = resumeService.paste("I use Python");
+        int calls = model.calls;
+        mvc.perform(post("/resumes/{id}/sessions", profile.id()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skills\":[\"Java\"],\"level\":\"beginner\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/resumes/{id}/sessions", profile.id()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skills\":[],\"level\":\"beginner\"}"))
+                .andExpect(status().isBadRequest());
+        assertEquals(calls, model.calls);
+        assertEquals(0L, jdbc.queryForObject("select count(*) from interview_sessions", Long.class));
+    }
+
+    @Test
+    void confirmedSubsetIsPersistedAndExtractionWithoutSkillsHasNoDefaults() throws Exception {
+        model.response = "{\"skills\":[]}";
+        assertTrue(resumeService.paste("I enjoy learning new things.").skills().isEmpty());
+        model.response = "{\"skills\":[{\"name\":\"Python\",\"evidence\":\"Python and SQL\"},{\"name\":\"SQL\",\"evidence\":\"Python and SQL\"}]}";
+        var profile = resumeService.paste("Python and SQL");
+        var session = resumeService.start(profile.id(), new com.first.genProject.resume.ResumeSessionRequest(java.util.List.of("SQL"), "advanced"));
+        var saved = store.session(session.id());
+        assertEquals(1, saved.resume().skills().size());
+        assertEquals("SQL", saved.resume().skills().getFirst().name());
+        model.response = "What tradeoffs arise with SQL transaction isolation?";
+        assertEquals("SQL", service.generateQuestion(session.id()).skill());
+    }
+
+    @Test
+    void nextQuestionUsesLatestFeedbackAndPersistsItsFocus() throws Exception {
+        var first = createQuestion("Spring Boot");
+        assertNull(first.focus());
+        model.response = VALID_FEEDBACK;
+        service.submitAnswer(first.id(), new AnswerSubmission("Private learner answer"));
+        model.response = "How would you describe constructor injection clearly to a teammate?";
+        var next = service.generateQuestion(first.sessionId());
+        assertEquals("clarity", next.focus().criterion());
+        assertTrue(next.focus().reason().contains("1/2"));
+        String prompt = model.prompt.getUserMessage().getText();
+        assertTrue(prompt.contains("Practice focus: clarity"));
+        assertTrue(prompt.contains("Explain constructor injection"));
+        assertTrue(prompt.contains(first.question()));
+        assertFalse(prompt.contains("Private learner answer"));
+        mvc.perform(get("/interview/sessions/{id}/resume", first.sessionId()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.question.focus.criterion").value("clarity"));
+        mvc.perform(get("/interview/sessions/{id}/questions", first.sessionId()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].focus.criterion").value("clarity"));
+        // The most recent attempt replaces earlier evidence; a perfect result has no weakness.
+        model.response = VALID_FEEDBACK.replace("\"score\": 4", "\"score\": 5")
+                .replace("\"score\": 2", "\"score\": 3").replace("\"score\": 1", "\"score\": 2");
+        service.submitAnswer(first.id(), new AnswerSubmission("Improved answer"));
+        model.response = "When would a prototype bean be appropriate?";
+        assertNull(service.generateQuestion(first.sessionId()).focus());
+        assertTrue(model.prompt.getUserMessage().getText().contains("Practice focus: General practice"));
+    }
+
+    @Test
+    void adaptiveEvidenceIsSessionScopedAndRecentQuestionsAreBounded() {
+        var first = createQuestion("Spring Boot");
+        model.response = VALID_FEEDBACK;
+        service.submitAnswer(first.id(), new AnswerSubmission("Answer"));
+        var other = createSession("Spring Boot");
+        model.response = "What is a Spring bean?";
+        assertNull(service.generateQuestion(other.id()).focus());
+        assertFalse(model.prompt.getUserMessage().getText().contains("Explain constructor injection"));
+        for (int i = 0; i < 7; i++) store.saveQuestion(first.sessionId(), "Recent question " + i);
+        assertEquals(5, store.generationContext(first.sessionId()).recentQuestions().size());
+        assertFalse(store.generationContext(first.sessionId()).recentQuestions().contains(first.question()));
+    }
+
+    @Test
+    void repeatedQuestionsAndLateGenerationAfterCompletionAreNotSaved() {
+        var first = createQuestion("Spring Boot");
+        model.response = "  HOW DOES DEPENDENCY INJECTION WORK?  ";
+        assertThrows(AiProviderException.class, () -> service.generateQuestion(first.sessionId()));
+        assertEquals(1, store.questions(first.sessionId(), 0, 20).totalElements());
+        model.response = "What happens during bean initialization?";
+        model.beforeReply = () -> store.complete(first.sessionId());
+        assertThrows(InterviewStateException.class, () -> service.generateQuestion(first.sessionId()));
+        assertEquals(1, store.questions(first.sessionId(), 0, 20).totalElements());
+    }
+
+    @Test
+    void resumeReturnsSavedStateWithoutAiAndCountsDistinctAnsweredQuestions() throws Exception {
+        var session = createSession("Spring Boot");
+        mvc.perform(get("/interview/sessions/{id}/resume", session.id())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.session.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.questionsAnswered").value(0))
+                .andExpect(jsonPath("$.question").isEmpty()).andExpect(jsonPath("$.answer").isEmpty());
+        var question = store.saveQuestion(session.id(), "Explain Spring beans");
+        model.response = VALID_FEEDBACK;
+        service.submitAnswer(question.id(), new AnswerSubmission("First attempt"));
+        var latest = service.submitAnswer(question.id(), new AnswerSubmission("Second attempt"));
+        int calls = model.calls;
+        mvc.perform(get("/interview/sessions/{id}/resume", session.id())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.question.id").value(question.id().toString()))
+                .andExpect(jsonPath("$.answer.id").value(latest.id().toString()))
+                .andExpect(jsonPath("$.answer.answer").value("Second attempt"))
+                .andExpect(jsonPath("$.answer.feedback.score").value(7))
+                .andExpect(jsonPath("$.questionsAnswered").value(1));
+        var pending = store.saveQuestion(session.id(), "Explain bean scopes");
+        mvc.perform(get("/interview/sessions/{id}/resume", session.id())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.question.id").value(pending.id().toString()))
+                .andExpect(jsonPath("$.answer").isEmpty()).andExpect(jsonPath("$.questionsAnswered").value(1));
+        store.complete(session.id());
+        mvc.perform(get("/interview/sessions/{id}/resume", session.id())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.session.status").value("COMPLETED"));
+        assertEquals(calls, model.calls);
+        assertEquals(2, rowCount("interview_questions"));
+        assertEquals(2, rowCount("interview_answers"));
+    }
+
+    @Test
+    void missingResumeSessionReturns404() throws Exception {
+        mvc.perform(get("/interview/sessions/{id}/resume", UUID.randomUUID()))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        assertEquals(0, model.calls);
     }
 
     @Test

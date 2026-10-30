@@ -1,0 +1,13 @@
+:root {
+  color-scheme: dark;
+  --bg: #090a11;
+  --surface: #11121c;
+  --text: #efedf6;
+  --muted: #a09eaf;
+  --dim: #9590a6;
+  --line: #ffffff0e;
+  --violet: #b29afa;
+  --cyan: #76ded7;
+  --font: Inter, "Segoe UI", Arial, sans-serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}

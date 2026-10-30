@@ -21,7 +21,7 @@ PostgreSQL, with Flyway migrations and a test-only H2 database.
 | Schema | `db/migration/V1__create_interview_history.sql` | Versioned tables, foreign keys, indexes, and score constraints |
 | Errors | `ApiExceptionHandler`, `InvalidInputException`, `AiProviderException` | Returns problem responses and avoids exposing provider exception text |
 | Prompt resources | `Prompt/SystemMessage`, `Prompt/UserMessage`, `Prompt/InterviewSystem`, `Prompt/InterviewQuestion`, `Prompt/InterviewFeedbackSystem`, `Prompt/InterviewFeedbackUser` | Supplies chat instructions and dynamically substitutes user input or interview selections |
-| Frontend | `static/index.html`, `static/coach.js` | Offers selection fields and shows one generated question; handles loading, cancellation, timeout, and request errors |
+| Frontend | `static/index.html`, `static/coach.js`, `static/interview-client.js` | Creates saved sessions; shows questions, accepts answers, displays rubric feedback, requests the next question, and completes sessions |
 | Legacy DTO | `entity/chatEntity` | Present but not referenced by the current application or tests |
 | Documentation | `README.md`, `frontend/README.md`, `implementation.md` | Describes use, test commands, and the implementation history |
 
@@ -68,20 +68,26 @@ features or claim they were missing.
    step is implemented with separate system and user template resources.
 2. Structured responses: question and feedback APIs now return Java records.
    Feedback contains validated component scores and a calculated total. The
-   backend supports question → answer → feedback; the UI still shows questions only.
+   backend and frontend support question → answer → feedback → next question.
 3. Regular PostgreSQL + JPA: implemented session/question/answer/feedback storage,
    history, completion, and aggregate progress APIs. H2 tests cover the contract;
    real PostgreSQL verification requires the optional Docker-backed test profile.
-4. Document search later: add an embedding model, document ingestion, retrieval,
-   and passage citations; consider pgvector at that stage.
+4. Document search: text-note ingestion, numbered passages, and per-document
+   semantic retrieval are implemented; see DOCUMENTS.md. Configurable hosted
+   OpenAI-compatible or local Ollama adapters generate embeddings, stored as JSON in regular PostgreSQL and ranked
+   by cosine similarity in Java. Live model verification, pgvector, and generated
+   explanations with citations remain pending.
 
-The basic question screen exists. Answer/feedback/history/progress screens and
-application deployment remain pending. A local PostgreSQL Compose file is provided;
-no application Docker image or deployed site exists. Quality evaluation is pending.
+The interview question/answer/feedback screen, history/progress dashboard, and
+saved-session resume are implemented. Verified application deployment remains
+pending. A local PostgreSQL Compose file is provided;
+Dockerfile.vercel now supplies an application image build definition; an actual
+container build and deployed site have not been verified. Quality evaluation is pending.
 
-Earlier requested extensions—weakness-targeted questions, résumé skill extraction,
-interview memory, and AI-invokable Java tools for previous scores/study tasks—are
-also not implemented. Previous scores can now be read through history/progress APIs. They require their own scoped milestones.
+Weakness-targeted questions now use the latest session feedback and up to five
+recent questions; see ADAPTIVE_INTERVIEWS.md. Résumé skill extraction, full
+conversation memory, and AI-invokable Java tools for previous scores/study tasks
+remain pending. Previous scores can be read through history/progress APIs.
 
 ## Verification limits
 

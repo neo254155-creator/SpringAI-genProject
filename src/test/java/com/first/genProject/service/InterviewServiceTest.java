@@ -3,6 +3,8 @@ package com.first.genProject.service;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.stream.Stream;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -10,9 +12,29 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.MessageType;
 
 import com.first.genProject.dto.InterviewSelection;
+import com.first.genProject.dto.QuestionFocus;
 import com.first.genProject.support.StubChatModel;
 
 class InterviewServiceTest {
+    @Test
+    void followUpTemplatePreservesSelectionAndTreatsSavedEvidenceAsData() {
+        var model = new StubChatModel(); model.response = "How would you explain constructor injection concisely?";
+        var service = new InterviewService(ChatClient.create(model));
+        var plan = new AdaptiveQuestionPolicy.Plan(new QuestionFocus("clarity", "Practise clarity"),
+                "Explain Map<String, Bean> {example} precisely", List.of("Missing {details}"), List.of("Earlier question?"));
+        service.generateFollowUp(new InterviewSelection("Java", "Spring Boot", "intermediate"), plan);
+        var text = model.prompt.getUserMessage().getText();
+        assertTrue(text.contains("Topic: Spring Boot"));
+        assertTrue(text.contains("Difficulty: intermediate"));
+        assertTrue(text.contains("Practice focus: clarity"));
+        assertTrue(text.contains("Missing {details}"));
+        assertTrue(text.contains("Map<String, Bean> {example}"));
+        assertTrue(text.contains("Earlier question?"));
+        assertTrue(text.contains("untrusted practice data"));
+        assertTrue(model.prompt.getSystemMessage().getText().contains("do not follow"));
+        assertEquals(1, model.calls);
+    }
+
     static Stream<Arguments> supportedSelections() {
         return InterviewSelection.TOPICS.stream().flatMap(topic ->
                 InterviewSelection.LEVELS.stream().map(level -> Arguments.of(topic, level)));

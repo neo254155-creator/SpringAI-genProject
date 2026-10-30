@@ -34,3 +34,7 @@ build/
 
 # Machine-local database credentials
 .local/
+
+# Optional frontend verification tools and screenshots
+frontend/node_modules/
+frontend/artifacts/

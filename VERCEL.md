@@ -19,6 +19,12 @@ Set these in the Vercel project's environment settings before deploying:
 | `GROQ_API_KEY` | Your Groq API key |
 | `GROQ_MODEL` | Optional; defaults to `openai/gpt-oss-120b` |
 
+For optional document search, also set `DOCUMENT_EMBEDDINGS_ENABLED=true`,
+`DOCUMENT_EMBEDDINGS_PROVIDER=openai-compatible`, `DOCUMENT_EMBEDDINGS_URL`,
+`DOCUMENT_EMBEDDINGS_MODEL`, and `DOCUMENT_EMBEDDINGS_API_KEY`. The URL must be
+your provider's HTTPS API base URL. See DOCUMENTS.md for the required API format.
+The interview question/answer/feedback screen does not require embeddings.
+
 Use a reachable hosted PostgreSQL database, such as Neon. `localhost` inside
 Vercel refers to the container, not your computer. This Dockerfile does not
 create or move a database. Flyway applies pending migrations on app startup

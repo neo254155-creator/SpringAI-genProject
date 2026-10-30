@@ -151,9 +151,19 @@ This is a practice summary, not an inferred mastery percentage.
 
 This is currently a single-learner workspace: there is no login, user table, or
 per-user access control. Session history and progress cover the database as a whole.
-The existing question-only frontend and original stateless `/questions` and
-`/feedback` endpoints remain available; those stateless routes do not save history.
-Use the session routes above for persistence. A history/progress UI is future work.
+The frontend uses saved-session routes. `/history.html` shows previous sessions,
+questions, answer attempts, rubric feedback, and topic progress.
+`GET /interview/sessions/{id}/resume` returns session metadata, the latest question,
+its latest saved answer/feedback (or null), and the count of distinct questions
+answered. It reads saved data without calling AI or changing records. Completed
+sessions can be opened for review. No schema change is needed.
+The original stateless `/questions` and `/feedback` endpoints remain available;
+those routes do not save history.
+
+Stored question responses include optional `focus` with `criterion` and `reason`.
+V4 adds nullable focus columns to `interview_questions`; older rows have no focus.
+Next questions use the latest saved session feedback and avoid the five most
+recent exact question texts. See ADAPTIVE_INTERVIEWS.md for selection rules.
 
 ## Verification
 

@@ -5,6 +5,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import jakarta.persistence.*;
 import com.first.genProject.dto.InterviewSelection;
+import com.first.genProject.resume.ResumeInterviewContext;
+import tools.jackson.databind.json.JsonMapper;
 
 @Entity
 @Table(name = "interview_sessions")
@@ -22,6 +24,10 @@ public class InterviewSessionEntity {
     @Column(nullable = false)
     private Instant createdAt;
     private Instant completedAt;
+    @Column(name = "resume_id")
+    private UUID resumeId;
+    @Column(name = "resume_context_json", columnDefinition = "TEXT")
+    private String resumeContextJson;
     @Version
     private long version;
 
@@ -40,6 +46,17 @@ public class InterviewSessionEntity {
             status = "COMPLETED";
             completedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
         }
+    }
+
+    public InterviewSessionEntity(ResumeInterviewContext context, String level) {
+        this(new InterviewSelection("Resume", "Resume interview", level));
+        resumeId = context.resumeId();
+        resumeContextJson = JsonMapper.builder().build().writeValueAsString(context);
+    }
+
+    public ResumeInterviewContext getResume() {
+        return resumeContextJson == null ? null : JsonMapper.builder().build()
+                .readValue(resumeContextJson, ResumeInterviewContext.class);
     }
 
     public boolean isActive() { return "ACTIVE".equals(status); }

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.first.genProject.dto.*;
 import com.first.genProject.exception.*;
 import com.first.genProject.persistence.*;
+import com.first.genProject.resume.ResumeInterviewContext;
 
 /** Database transactions end before orchestration calls the AI provider. */
 @Service
@@ -31,9 +32,38 @@ public class InterviewHistoryStore {
         return sessionView(sessions.save(new InterviewSessionEntity(selection)));
     }
 
+    @Transactional
+    public SessionResponse createResume(ResumeInterviewContext context, String level) {
+        return sessionView(sessions.save(new InterviewSessionEntity(context, level)));
+    }
+
     @Transactional(readOnly = true)
     public SessionResponse session(UUID id) {
         return sessionView(loadSession(id));
+    }
+
+    @Transactional(readOnly = true)
+    public GenerationContext generationContext(UUID id) {
+        var session = loadSession(id);
+        requireActive(session);
+        var recent = questions.findBySession_Id(id, pageRequest(0, 5, "createdAt")).stream()
+                .map(InterviewQuestionEntity::getQuestion).toList();
+        var latest = feedback.findByAnswer_Question_Session_Id(id, pageRequest(0, 1, "answer.submittedAt"))
+                .stream().findFirst();
+        return new GenerationContext(sessionView(session), recent,
+                latest.map(InterviewFeedbackEntity::toFeedback).orElse(null),
+                latest.map(f -> f.getAnswer().getQuestion().getResumeSkill()).orElse(null),
+                questions.countBySession_Id(id));
+    }
+
+    @Transactional(readOnly = true)
+    public SessionResumeResponse resume(UUID id) {
+        var session = loadSession(id);
+        var latest = questions.findBySession_Id(id, pageRequest(0, 1, "createdAt")).stream().findFirst();
+        StoredQuestionResponse question = latest.map(this::questionView).orElse(null);
+        StoredAnswerResponse answer = latest.flatMap(q -> feedback.findByAnswer_Question_Id(q.getId(),
+                pageRequest(0, 1, "answer.submittedAt")).stream().findFirst()).map(this::answerView).orElse(null);
+        return new SessionResumeResponse(sessionView(session), question, answer, feedback.countQuestionsAnswered(id));
     }
 
     @Transactional(readOnly = true)
@@ -57,9 +87,23 @@ public class InterviewHistoryStore {
 
     @Transactional
     public StoredQuestionResponse saveQuestion(UUID sessionId, String question) {
+        return saveQuestion(sessionId, question, null);
+    }
+
+    @Transactional
+    public StoredQuestionResponse saveQuestion(UUID sessionId, String question, QuestionFocus focus) {
+        return saveQuestion(sessionId, question, focus, null);
+    }
+
+    @Transactional
+    public StoredQuestionResponse saveQuestion(UUID sessionId, String question, QuestionFocus focus, String skill) {
         var session = lockSession(sessionId);
         requireActive(session);
-        return questionView(questions.save(new InterviewQuestionEntity(session, question)));
+        if (session.getResume() != null && (skill == null || session.getResume().skills().stream()
+                .noneMatch(s -> s.name().equals(skill)))) throw new InvalidInputException("Question skill must belong to the confirmed resume.");
+        var entity = new InterviewQuestionEntity(session, question, focus);
+        entity.setResumeSkill(skill);
+        return questionView(questions.save(entity));
     }
 
     @Transactional
@@ -118,12 +162,12 @@ public class InterviewHistoryStore {
 
     private SessionResponse sessionView(InterviewSessionEntity session) {
         return new SessionResponse(session.getId(), session.getTrack(), session.getTopic(),
-                session.getDifficulty(), session.getStatus(), session.getCreatedAt(), session.getCompletedAt());
+                session.getDifficulty(), session.getStatus(), session.getCreatedAt(), session.getCompletedAt(), session.getResume());
     }
 
     private StoredQuestionResponse questionView(InterviewQuestionEntity question) {
         return new StoredQuestionResponse(question.getId(), question.getSession().getId(),
-                question.getQuestion(), question.getCreatedAt());
+                question.getQuestion(), question.getCreatedAt(), question.getFocus(), question.getResumeSkill());
     }
 
     private StoredAnswerResponse answerView(InterviewFeedbackEntity result) {
@@ -133,4 +177,6 @@ public class InterviewHistoryStore {
     }
 
     public record QuestionContext(SessionResponse session, StoredQuestionResponse question) { }
+    public record GenerationContext(SessionResponse session, List<String> recentQuestions,
+            InterviewFeedback latestFeedback, String latestSkill, long questionCount) { }
 }

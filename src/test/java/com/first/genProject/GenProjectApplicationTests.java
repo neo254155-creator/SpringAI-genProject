@@ -18,6 +18,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
+import tools.jackson.databind.json.JsonMapper;
+import com.first.genProject.persistence.StudyDocumentRepository;
+import com.first.genProject.persistence.StudyPassageRepository;
 
 import com.first.genProject.support.StubChatModel;
 
@@ -39,6 +45,9 @@ class GenProjectApplicationTests {
 
     @Autowired
     private ChatModel activeModel;
+
+    @Autowired private StudyDocumentRepository documents;
+    @Autowired private StudyPassageRepository passages;
 
     @BeforeEach
     void resetStub() {
@@ -156,6 +165,80 @@ class GenProjectApplicationTests {
                 .andExpect(jsonPath("$.rubric.completeness.score").value(2));
         assertEquals("offline-test-model", stub.prompt.getOptions().getModel());
         assertEquals(1, stub.calls);
+    }
+
+    @Test
+    void uploadedNotesRoundTripWithStableOrderedPassagesWithoutCallingAi() throws Exception {
+        String text = "a".repeat(1199) + "😀" + "\nSpring beans are managed by the container.";
+        var file = new MockMultipartFile("file", "C:\\notes\\spring.md", "text/markdown",
+                text.getBytes(StandardCharsets.UTF_8));
+        var response = mvc.perform(multipart("/documents").file(file).param("title", " Spring notes "))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("Spring notes"))
+                .andExpect(jsonPath("$.filename").value("spring.md"))
+                .andReturn().getResponse();
+        String location = response.getHeader("Location");
+        mvc.perform(get(location)).andExpect(status().isOk())
+                .andExpect(content().json(response.getContentAsString()));
+        String body = mvc.perform(get(location + "/passages"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].number").value(1))
+                .andExpect(jsonPath("$[1].number").value(2))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        var nodes = JsonMapper.builder().build().readTree(body);
+        assertEquals(text, nodes.get(0).get("text").asText() + nodes.get(1).get("text").asText());
+        assertNotEquals(nodes.get(0).get("id").asText(), nodes.get(1).get("id").asText());
+        mvc.perform(get(location + "/passages")).andExpect(content().json(body));
+        mvc.perform(get("/documents").param("size", "1"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(1));
+        assertEquals(0, stub.calls);
+    }
+
+    @Test
+    void invalidUploadsDoNotPersistDocumentsOrPassages() throws Exception {
+        long documentCount = documents.count();
+        long passageCount = passages.count();
+        var files = java.util.List.of(
+                new MockMultipartFile("file", "notes.txt", "text/plain", new byte[0]),
+                new MockMultipartFile("file", "notes.pdf", "application/pdf", "pdf".getBytes(StandardCharsets.UTF_8)),
+                new MockMultipartFile("file", "notes.txt", "text/plain", new byte[] {(byte) 0xc3, 0x28}),
+                new MockMultipartFile("file", "notes.txt", "text/plain", new byte[] {0}),
+                new MockMultipartFile("file", "notes.txt", "text/plain", " \n\t".getBytes(StandardCharsets.UTF_8)),
+                new MockMultipartFile("file", "notes.txt", "text/plain", new byte[65_537]));
+        for (var file : files) {
+            mvc.perform(multipart("/documents").file(file).param("title", "Notes"))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+        }
+        var validFile = new MockMultipartFile("file", "notes.txt", "text/plain", "Java".getBytes(StandardCharsets.UTF_8));
+        for (String title : java.util.List.of(" ", "x".repeat(201))) {
+            mvc.perform(multipart("/documents").file(validFile).param("title", title))
+                    .andExpect(status().isBadRequest());
+        }
+        assertEquals(documentCount, documents.count());
+        assertEquals(passageCount, passages.count());
+        assertEquals(0, stub.calls);
+    }
+
+    @Test
+    void documentEndpointsValidateMissingResourcesAndPagination() throws Exception {
+        String unknown = "/documents/" + UUID.randomUUID();
+        mvc.perform(get(unknown)).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        mvc.perform(get(unknown + "/passages")).andExpect(status().isNotFound());
+        mvc.perform(get("/documents").param("page", "-1")).andExpect(status().isBadRequest());
+        mvc.perform(get("/documents").param("size", "101")).andExpect(status().isBadRequest());
+        mvc.perform(multipart("/documents").param("title", "Notes")).andExpect(status().isBadRequest());
+        assertEquals(0, stub.calls);
+    }
+
+    @Test
+    void documentIndexingReportsDisabledEmbeddingsWithDefaultConfiguration() throws Exception {
+        var file = new MockMultipartFile("file", "notes.txt", "text/plain", "Java notes".getBytes(StandardCharsets.UTF_8));
+        String location = mvc.perform(multipart("/documents").file(file).param("title", "Notes"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getHeader("Location");
+        mvc.perform(post(location + "/index")).andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("EMBEDDINGS_UNAVAILABLE"));
+        assertEquals(0, stub.calls);
     }
 
     @TestConfiguration(proxyBeanMethods = false)
