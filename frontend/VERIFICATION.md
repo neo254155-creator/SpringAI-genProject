@@ -1,5 +1,21 @@
 # Frontend verification
 
+## Live résumé smoke — 2026-11-01
+
+- The actual local project passed browser upload, grounded skill extraction, confirmation of Python, beginner selection, one question, scored feedback, page reload, completion, saved history, and progress through Groq and Neon. Exactly three outbound Groq requests returned HTTP 200; no Gemini call ran.
+- The synthetic answer received 10/10 and reopened with the same answer and score. A completed `codex-live-check-20261101.txt` verification session remains in shared history.
+- A temporary local forwarding proxy capped outbound requests at three. No automatic retry or second question was used; reopening saved data made no additional AI request. The test application was stopped afterward, and credentials were kept out of reports and commits.
+- An initial launcher attempt omitted Java parameter metadata and failed before AI. Recompiling with Maven's `-parameters` setting fixed the launcher; production code was unchanged. Weakness practice remains verified by offline checks below; a single live example does not establish scoring consistency or database restart recovery.
+
+## Full résumé journey — 2026-11-01
+
+- `resume-browser-check.mjs` passed upload → confirmed skills → difficulty → answers → scored feedback → weakness practice → saved history/progress, with refresh and 390/320px checks.
+- Stateful HTTP fixtures check explicit retry after first-question failure, retained input on a 429 error, and no AI mutations during saved-data reads. All external browser requests are blocked.
+- Separately, all 19 `InterviewPersistenceTest` tests passed through Spring Boot/MockMvc/JPA/H2, including a new multipart-upload-to-progress API test; migrations V1–V5 applied successfully. The 38 client tests also passed.
+- No live AI or Neon calls. These are complementary browser-fixture and API/database checks, not one browser-to-Neon run; provider quality, PostgreSQL-specific behavior, and database restart recovery remain unverified.
+- Use `node frontend/resume-browser-check.mjs`. Like the document check, it accepts `PLAYWRIGHT_MODULE`, `BROWSER_EXECUTABLE`, and `STATIC_ROOT`; screenshots are ignored under frontend/artifacts/.
+- The Windows backend run needed Mockito's JAR supplied with Surefire `-DargLine=-javaagent:<mockito-core.jar>` because dynamic agent attachment stalled. No production configuration was changed.
+
 ## Study Notes — 2026-11-01
 
 - 38 frontend client tests passed, including 12 new document/cache/quota tests.

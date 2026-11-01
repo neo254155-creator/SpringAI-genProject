@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static com.first.genProject.support.FeedbackFixtures.VALID_FEEDBACK;
 
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
@@ -21,6 +22,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.databind.json.JsonMapper;
@@ -55,6 +57,87 @@ abstract class InterviewPersistenceContract {
         model.failure = null;
         model.beforeReply = null;
         model.response = "How does dependency injection work?";
+    }
+
+    @Test
+    void uploadedResumeJourneyRetainsFeedbackFocusAndProgressAcrossApiReads() throws Exception {
+        model.response = """
+                {"skills":[{"name":"Python","evidence":"Built tools with Python."},
+                {"name":"PostgreSQL","evidence":"Used PostgreSQL for storage."}]}
+                """;
+        String uploaded = mvc.perform(multipart("/resumes").file(new MockMultipartFile(
+                "file", "resume.txt", "text/plain", "Built tools with Python. Used PostgreSQL for storage."
+                        .getBytes(StandardCharsets.UTF_8))))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.skills.length()").value(2))
+                .andReturn().getResponse().getContentAsString();
+        String resumeId = json.readTree(uploaded).get("id").asString();
+        String created = mvc.perform(post("/resumes/{id}/sessions", resumeId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"skills\":[\"Python\"],\"level\":\"beginner\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.level").value("beginner"))
+                .andExpect(jsonPath("$.resume.skills.length()").value(1))
+                .andExpect(jsonPath("$.resume.skills[0].name").value("Python"))
+                .andReturn().getResponse().getContentAsString();
+        String sessionId = json.readTree(created).get("id").asString();
+        model.response = "How does a Python generator work?";
+        String first = mvc.perform(post("/interview/sessions/{id}/questions", sessionId))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.skill").value("Python"))
+                .andReturn().getResponse().getContentAsString();
+        String firstId = json.readTree(first).get("id").asString();
+        String initialFeedback = """
+                {"correctPoints":["Recognizes lazy evaluation."],"missingPoints":["Give a yield example."],
+                "explanation":"Use yield to produce one value at a time.","rubric":{
+                "correctness":{"score":4,"reason":"Mostly accurate."},
+                "completeness":{"score":2,"reason":"An example is missing."},
+                "clarity":{"score":1,"reason":"Explain the sequence more clearly."}}}
+                """;
+        model.response = initialFeedback;
+        mvc.perform(post("/interview/questions/{id}/answers", firstId).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"answer\":\"A generator yields values lazily.\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.feedback.score").value(7));
+        mvc.perform(get("/interview/sessions/{id}/resume", sessionId))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.questionsAnswered").value(1))
+                .andExpect(jsonPath("$.answer.answer").value("A generator yields values lazily."))
+                .andExpect(jsonPath("$.answer.feedback.rubric.clarity.score").value(1));
+
+        model.response = "Explain yield clearly using a small Python example.";
+        String followUp = mvc.perform(post("/interview/sessions/{id}/questions", sessionId))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.skill").value("Python"))
+                .andExpect(jsonPath("$.focus.criterion").value("clarity"))
+                .andReturn().getResponse().getContentAsString();
+        String followUpId = json.readTree(followUp).get("id").asString();
+        model.response = initialFeedback.replace("\"score\":4", "\"score\":5")
+                .replace("\"score\":2", "\"score\":3").replace("\"score\":1", "\"score\":2");
+        mvc.perform(post("/interview/questions/{id}/answers", followUpId).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"answer\":\"For example, yield 1 pauses the generator until next() resumes it.\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.feedback.score").value(10));
+        mvc.perform(post("/interview/sessions/{id}/complete", sessionId))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("COMPLETED"));
+
+        int calls = model.calls;
+        mvc.perform(get("/interview/sessions/{id}/resume", sessionId))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.session.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.questionsAnswered").value(2))
+                .andExpect(jsonPath("$.question.focus.criterion").value("clarity"))
+                .andExpect(jsonPath("$.answer.feedback.score").value(10));
+        mvc.perform(get("/interview/sessions")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].resume.skills.length()").value(1));
+        mvc.perform(get("/interview/sessions/{id}/questions", sessionId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2));
+        mvc.perform(get("/interview/questions/{id}/answers", firstId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].feedback.score").value(7));
+        mvc.perform(get("/interview/questions/{id}/answers", followUpId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].feedback.score").value(10));
+        mvc.perform(get("/interview/progress")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].topic").value("Python"))
+                .andExpect(jsonPath("$[0].level").value("beginner"))
+                .andExpect(jsonPath("$[0].attempts").value(2))
+                .andExpect(jsonPath("$[0].questionsAnswered").value(2))
+                .andExpect(jsonPath("$[0].averageScore").value(8.5))
+                .andExpect(jsonPath("$[0].bestScore").value(10));
+        assertEquals(5, calls, "Only extraction, two questions, and two evaluations use the model");
+        assertEquals(calls, model.calls, "Reviewing saved data must not call AI");
     }
 
     @Test

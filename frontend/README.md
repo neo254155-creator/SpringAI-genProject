@@ -99,3 +99,9 @@ node frontend/documents-client.test.mjs
 `node frontend/documents-browser-check.mjs` runs the document UI with fixtures and
 also checks the main resume upload. Requires optional Playwright tooling; see
 VERIFICATION.md. It never calls Groq, Gemini, or a real database.
+
+`node frontend/resume-browser-check.mjs` checks the complete résumé journey with
+stateful HTTP fixtures, including saved history/progress, refresh, explicit retries,
+quota errors, and mobile layouts. It uses the same optional Playwright setup and
+environment overrides as the document check. For separate API/JPA/H2 verification,
+run `./mvnw -Dtest=InterviewPersistenceTest test`; the AI model is stubbed.

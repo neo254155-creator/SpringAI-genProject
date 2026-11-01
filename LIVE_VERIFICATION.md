@@ -1,5 +1,15 @@
 # Verify real database and AI connections
 
+## Latest live résumé smoke — 2026-11-01
+
+The actual project passed browser résumé upload → confirmed skills → beginner
+difficulty → question → scored feedback → reload → completed-session history and
+progress, using Neon and exactly three successful Groq requests. No Gemini request
+ran. One labelled synthetic verification session remains in history. Weakness
+follow-ups passed offline, but live follow-up quality and restart recovery remain
+unverified. See frontend/VERIFICATION.md for scope; the older connection checks below
+do not describe this latest result.
+
 From the project directory, run:
 
 ```sh
