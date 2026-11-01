@@ -12,6 +12,7 @@ assets. No React, frontend build, CDN assets, or runtime npm dependencies were a
 | `/dashboard.html` | Actual saved totals, recent-answer chart, topic averages, recent sessions, and score-based suggestions. |
 | `/practice.html` | Existing saved interview workflow with new styling, stage indicators, local visit timer, and end confirmation. |
 | `/history.html` | Paginated sessions/questions/answer attempts and complete saved feedback. |
+| `/documents.html` | Optional study notes: upload, browse, explicitly index, ask questions, and inspect cited excerpts. |
 | `/analytics.html` | Actual topic averages, recent score changes, bounded weekly session starts, and recent completion history. |
 | `/recommendations.html` | Topic priorities calculated from actual saved averages; AI recommendation tools remain planned. |
 | `/questions.html` | Clearly marked question-bank placeholder linking to real saved questions in history. |
@@ -34,6 +35,8 @@ session URL. A topic/level link can preselect supported values from the options 
 - `ui/dashboard-client.js`: bounded reads through real session/progress/resume endpoints.
 - `ui/analytics.js`: pure weighted averages, time ordering, score changes, activity, and topic priorities.
 - `ui/dashboard.js`: overview, analytics, recommendations, loading/error/empty/partial states.
+- `ui/documents.js` / `ui/documents.css`: optional study-note workspace and responsive styling.
+- `ui/documents-client.js`: validated document requests and bounded per-visit caching of successful indexing/answers.
 - `ui/api-config.js`: loads the public API base URL and supplies it centrally to requestJson.
 - `coach.js` / `interview-client.js`: preserved selection → session → question → answer → feedback → next → complete/resume behavior.
 - `history.js` / `history-client.js`: preserved history pagination, retries, and feedback inspection.
@@ -64,7 +67,7 @@ CORS policy or authentication mechanism was silently added.
 - Recommendations use a transparent lowest-average rule; no AI recommendation API exists.
 - No login/profile API or ownership enforcement exists. Routes are a shared workspace,
   not falsely protected account pages. Authentication remains a separate backend task.
-- Embeddings and document screens are outside this frontend milestone.
+- Study Notes is separate from the main resume-based interview journey. Listing/uploading makes no AI calls; indexing and new questions require explicit clicks. No automatic provider retries run. Per-visit cache clears on refresh.
 - The timer is local to the page visit; answer counts and workflow stages do not imply
   a fixed interview length. Unsubmitted drafts are not persisted.
 - Stop waiting aborts the browser request; the server can still finish/save. Retrying
@@ -89,5 +92,10 @@ and the runnable browser verification script. Offline commands:
 node frontend/interview-client.test.mjs
 node frontend/history-client.test.mjs
 node frontend/dashboard.test.mjs
+node frontend/documents-client.test.mjs
 ./mvnw -o test
 ```
+
+`node frontend/documents-browser-check.mjs` runs the document UI with fixtures and
+also checks the main resume upload. Requires optional Playwright tooling; see
+VERIFICATION.md. It never calls Groq, Gemini, or a real database.

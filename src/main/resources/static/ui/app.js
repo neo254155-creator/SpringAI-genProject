@@ -44,6 +44,9 @@ if (page === "privacy") {
         } else if (page === "history") {
           await import("../history.js");
           root.replaceChildren(document.createElement("interview-history"));
+        } else if (page === "documents") {
+          const { renderDocuments } = await import("./documents.js");
+          await renderDocuments(root);
         } else {
           const { renderDashboard } = await import("./dashboard.js");
           await renderDashboard(root, page);

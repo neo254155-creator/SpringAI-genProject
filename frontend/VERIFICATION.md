@@ -1,5 +1,19 @@
 # Frontend verification
 
+## Study Notes — 2026-11-01
+
+- 38 frontend client tests passed, including 12 new document/cache/quota tests.
+- The fixture-only documents-browser-check.mjs passed upload, indexing, cited
+  answers, insufficient evidence, quota/errors, saved-upload recovery, cancellation,
+  pagination, text safety, and 1440/390/320px layouts; main resume upload also passed.
+- Desktop/mobile screenshots were inspected. Tests used a separate headless Brave
+  instance and mocked APIs; no Groq/Gemini calls or real database writes occurred.
+- Run with optional Playwright installed: `node frontend/documents-browser-check.mjs`.
+  `BROWSER_EXECUTABLE` can select an installed Chromium browser. Screenshots are
+  saved under ignored frontend/artifacts/. Live workflow quality remains unverified.
+
+The older entries below describe verification at earlier milestones.
+
 ## Checks completed in the agent environment
 
 - Maven packaging succeeded with the existing Java build.

@@ -2,7 +2,8 @@
 
 Upload UTF-8 `.txt` or `.md` notes and retrieve their saved passages. Files must
 contain nonblank text and be at most 65,536 bytes (64 KiB). PDF and Word extraction
-are not implemented. This is a backend API; the current frontend has no upload form.
+are not implemented. Open `/documents.html` for the optional Study Notes workspace;
+the main interview journey remains resume-based.
 
 ```sh
 curl -X POST http://localhost:8080/documents \
@@ -160,7 +161,8 @@ Checking citation IDs proves source identity, not that every generated claim is
 entailed by its cited text. Prompt-injection resistance, real retrieval quality,
 answer quality, and citation support still require live evaluation. The default
 similarity cutoff is a retrieval filter, not a confidence estimate. The document
-frontend and incorporating notes into interview feedback remain future tasks.
+workspace is available at `/documents.html`. Incorporating notes into interview
+feedback remains a future task.
 
 This endpoint preserves the existing search/index errors (400, 404, 409, 502,
 503). Validate API behavior with the focused DocumentAnswerServiceTest and
@@ -168,3 +170,18 @@ DocumentAnswerControllerTest tests; these use retrieval/model stubs, not live
 providers. pgvector remains an optional upgrade for larger collections.
 
 Adapter contract: https://ai.google.dev/gemini-api/docs/openai#embeddings.
+
+## Study Notes screen
+
+Save a document, choose it, click Index notes, then submit a question. Uploading,
+browsing, selecting, and refreshing notes do not call either AI provider.
+Indexing and answers only run on explicit clicks, with no automatic retries.
+Successful indexing is reused during the visit; up to 20 successful answers are
+cached by document/question in memory. Refreshing the page clears this cache.
+Previously indexed documents can be queried directly without indexing again.
+
+The screen shows insufficient-evidence responses and expandable saved source
+excerpts as text, handles pagination/errors/cancellation, and preserves input on
+failed answers. Cancelling stops waiting; the server can still consume quota.
+Generated answers are not saved after a page refresh. Source identity checks do
+not establish that all generated claims are supported.

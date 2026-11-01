@@ -165,7 +165,7 @@ InterviewHistoryStore, InterviewFeedbackRepository, and PERSISTENCE.md.
 | Compatibility detection | Missing/incompatible indexes or dimensions require reindexing. Changing model weights under the same identity is not detected automatically. |
 | Provider timeouts | Embedding adapters use a 5-second connection timeout and 60-second read timeout. Hosted provider input limits still apply. |
 
-There is no document frontend yet. Search returns source passages; it does not
+The optional Study Notes frontend is available at `/documents.html`. Search does not
 incorporate notes into interview feedback. `POST /documents/{id}/answer` now
 generates document-backed explanations and returns checked source references;
 see DOCUMENTS.md. Real answer/source-support evaluation remains pending.
@@ -244,15 +244,15 @@ features as missing.
 | 2. Complete interview flow | Selection → question → answer → rubric feedback → weakness-based next question. | Verify the flow in a real browser against actual services and evaluate generated questions/feedback. |
 | 3. PostgreSQL persistence | Sessions, questions, answers, feedback, and progress use JPA/Flyway. | Independently verify actual PostgreSQL schema/migrations and integration behavior. Add the originally requested users layer, authentication, ownership, and per-user data separation. |
 | 4. Document search with citations | Upload, splitting, Gemini embedding adapter, JSON vector storage, retrieval, and generated answers with checked citation IDs. | Evaluate live retrieval/answer quality and whether cited text supports claims. pgvector is an optional storage/search upgrade for larger collections. |
-| 5. Frontend and deployment | Landing, overview, practice, history, analytics, score-based suggestions, motion settings, resume, Compose, and application Dockerfile exist. | Add document upload/index/search/cited-answer UI; verify browser presentation; build/run the image and complete a verified deployment with reachable database/chat/embedding services. |
+| 5. Frontend and deployment | Resume interview workspace, optional Study Notes upload/index/cited-answer UI, Compose, and application Dockerfile exist. | Verify the complete live workflows; build/run the image and complete a verified deployment with reachable services. |
 | 6. Quality evaluation | Structural validation and deterministic offline tests exist. | Use a fixed set of answers to measure scoring consistency and explanation quality; evaluate weakness-targeted questions, real retrieval relevance, and whether cited passages support generated claims. |
 
 Additional requested features still unfinished:
 
 | Requested feature | Intended behavior and current boundary |
 | --- | --- |
-| Résumé-based interviews | Extract skills from an uploaded résumé and generate relevant questions. There is no résumé parser or skill-extraction interview flow. Existing text-note upload is not this feature. |
-| Document-backed explanations | The answer API returns explanations and actual cited passages from uploaded notes. The document UI and integrating notes into interview feedback remain pending. |
+| Résumé-based interviews | Upload/paste, skill extraction with evidence, skill confirmation, and difficulty-based session creation exist. Verify the full interview journey and live question/feedback quality. |
+| Document-backed explanations | The answer API and Study Notes screen return explanations and actual cited passages from uploaded notes. Integrating notes into interview feedback remains pending. |
 | Full conversation memory | Preserve useful question/answer context across the interview. Current saved history and bounded follow-up evidence are partial context, not full conversational memory. |
 | Controlled Java tools for the AI | Let the model retrieve previous scores and save study tasks through explicitly controlled Java methods. Existing history/progress APIs do not expose an AI tool-calling workflow; study-task storage is absent. |
 

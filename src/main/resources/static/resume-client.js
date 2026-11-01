@@ -49,9 +49,10 @@ export class ResumeClient {
       );
     const form = new FormData();
     form.append("file", file);
+    const fetcher = this.fetcher;
     return validateProfile(
       await readJsonResponse(
-        await this.fetcher(apiUrl("/resumes"), {
+        await fetcher(apiUrl("/resumes"), {
           method: "POST",
           body: form,
           signal,

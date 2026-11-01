@@ -26,7 +26,8 @@ test("paste uses actual resume endpoint and returns evidence without a preset sk
 test("upload sends multipart without manually overriding the browser boundary", async () => {
   let request;
   const file = new File(["Python"], "resume.txt", { type: "text/plain" });
-  await new ResumeClient(async (path, options) => {
+  await new ResumeClient(async function (path, options) {
+    assert.equal(this, undefined, "native fetch must not be bound to the client object");
     request = { path, options };
     return ok(profile);
   }).upload(file);

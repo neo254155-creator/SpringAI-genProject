@@ -61,6 +61,7 @@ const links = [
   ["overview", "Overview", "grid", "/dashboard.html"],
   ["practice", "Résumé Interview", "chat", "/practice.html"],
   ["history", "Practice History", "history", "/history.html"],
+  ["documents", "Study Notes", "book", "/documents.html"],
   ["analytics", "Performance Analytics", "chart", "/analytics.html"],
   ["questions", "Question Bank", "book", "/questions.html"],
   ["recommendations", "Recommendations", "spark", "/recommendations.html"],
