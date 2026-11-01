@@ -20,6 +20,7 @@ The response is HTTP 201 with `id`, `title`, `filename`, `createdAt`, and a
 | `GET /documents/{id}/passages` | Ordered passages with stable `id`, `number`, and `text` |
 | `POST /documents/{id}/index` | Generate and persist passage embeddings; reindexing replaces the saved index |
 | `POST /documents/{id}/search` | Find similar passages within this document |
+| `POST /documents/{id}/answer` | Generate an answer from retrieved passages and return checked source references |
 
 Passages preserve the uploaded text in consecutive sections of at most 1,200
 Java UTF-16 code units, without splitting a Unicode surrogate pair. An initial
@@ -130,9 +131,40 @@ not index a document. No embedding calls happen during startup or upload.
 | 502 `EMBEDDING_PROVIDER_ERROR` | Embedding request failed or returned invalid vectors |
 | 503 `EMBEDDINGS_UNAVAILABLE` | Embeddings are disabled |
 
-Remaining work: generate explanations from retrieved passages with verified
-citations, evaluate retrieval quality against real notes, and optionally use
-pgvector for larger collections. Search returns source passages but does not yet
-generate an AI explanation or incorporate notes into interview feedback.
+## Answers with source citations
+
+After upload and indexing, ask a question using the same query, limit, and
+minimumScore fields as search:
+
+```sh
+curl -X POST http://localhost:8080/documents/DOCUMENT_ID/answer \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"How are Spring beans managed?","limit":5,"minimumScore":0.3}'
+```
+
+The application retrieves passages with Gemini embeddings, then asks the existing
+Groq chat model to answer using only those passages. No new API key is required.
+The response contains `documentId`, `title`, `query`, `answer`,
+`insufficientEvidence`, and `sources`. Each source has the actual saved
+`passageId`, `number`, `text`, and `similarity`; source text is never taken from
+model output. Only the sources cited by the model are returned.
+
+Citation IDs must belong to the retrieved passages, be unique, and be nonempty
+for an answer. Invalid model output returns the existing safe 502 error. If no
+passages meet the search threshold, chat is skipped. If the model reports that
+evidence is insufficient, the application returns a standard explanation and an
+empty source list, discarding generated prose. Requests read existing data and
+do not save generated answers, create indexes, or run migrations.
+
+Checking citation IDs proves source identity, not that every generated claim is
+entailed by its cited text. Prompt-injection resistance, real retrieval quality,
+answer quality, and citation support still require live evaluation. The default
+similarity cutoff is a retrieval filter, not a confidence estimate. The document
+frontend and incorporating notes into interview feedback remain future tasks.
+
+This endpoint preserves the existing search/index errors (400, 404, 409, 502,
+503). Validate API behavior with the focused DocumentAnswerServiceTest and
+DocumentAnswerControllerTest tests; these use retrieval/model stubs, not live
+providers. pgvector remains an optional upgrade for larger collections.
 
 Adapter contract: https://ai.google.dev/gemini-api/docs/openai#embeddings.
