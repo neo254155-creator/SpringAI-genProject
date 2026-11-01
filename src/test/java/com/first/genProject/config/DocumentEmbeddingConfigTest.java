@@ -20,21 +20,26 @@ class DocumentEmbeddingConfigTest {
     }
 
     @Test
-    void propertiesSelectHostedOrLocalProvider() {
+    void propertiesSelectHostedGeminiProvider() {
         context.withPropertyValues("document-search.embedding.enabled=true",
-                "document-search.embedding.provider=openai-compatible", "document-search.embedding.base-url=https://example.com/v1",
+                "document-search.embedding.provider=openai-compatible", "document-search.embedding.base-url=https://generativelanguage.googleapis.com/v1beta/openai",
                 "document-search.embedding.model=model", "document-search.embedding.api-key=test-key")
                 .run(c -> assertInstanceOf(HostedPassageEmbeddingClient.class, c.getBean(PassageEmbeddingClient.class)));
-        context.withPropertyValues("document-search.embedding.enabled=true", "document-search.embedding.provider=ollama",
-                "document-search.embedding.base-url=http://localhost:11434", "document-search.embedding.model=embeddinggemma")
-                .run(c -> assertInstanceOf(OllamaPassageEmbeddingClient.class, c.getBean(PassageEmbeddingClient.class)));
+    }
+
+    @Test
+    void unsupportedProviderFailsAtStartup() {
+        context.withPropertyValues("document-search.embedding.enabled=true", "document-search.embedding.provider=unsupported",
+                "document-search.embedding.base-url=https://generativelanguage.googleapis.com/v1beta/openai",
+                "document-search.embedding.model=gemini-embedding-001", "document-search.embedding.api-key=test-key")
+                .run(c -> assertNotNull(c.getStartupFailure()));
     }
 
     @Test
     void enabledButIncompleteSettingsFailClearlyAtStartup() {
         context.withPropertyValues("document-search.embedding.enabled=true")
                 .run(c -> assertNotNull(c.getStartupFailure()));
-        context.withPropertyValues("document-search.embedding.enabled=true", "document-search.embedding.base-url=https://example.com/v1",
+        context.withPropertyValues("document-search.embedding.enabled=true", "document-search.embedding.base-url=https://generativelanguage.googleapis.com/v1beta/openai",
                 "document-search.embedding.model=model").run(c -> assertNotNull(c.getStartupFailure()));
     }
 }

@@ -38,3 +38,6 @@ build/
 # Optional frontend verification tools and screenshots
 frontend/node_modules/
 frontend/artifacts/
+
+# Downloaded installers do not belong in source control
+scripts/*.deb

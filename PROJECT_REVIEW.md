@@ -22,7 +22,6 @@ PostgreSQL, with Flyway migrations and a test-only H2 database.
 | Errors | `ApiExceptionHandler`, `InvalidInputException`, `AiProviderException` | Returns problem responses and avoids exposing provider exception text |
 | Prompt resources | `Prompt/SystemMessage`, `Prompt/UserMessage`, `Prompt/InterviewSystem`, `Prompt/InterviewQuestion`, `Prompt/InterviewFeedbackSystem`, `Prompt/InterviewFeedbackUser` | Supplies chat instructions and dynamically substitutes user input or interview selections |
 | Frontend | `static/index.html`, `static/coach.js`, `static/interview-client.js` | Creates saved sessions; shows questions, accepts answers, displays rubric feedback, requests the next question, and completes sessions |
-| Legacy DTO | `entity/chatEntity` | Present but not referenced by the current application or tests |
 | Documentation | `README.md`, `frontend/README.md`, `implementation.md` | Describes use, test commands, and the implementation history |
 
 ## Part 1 — Foundation status
@@ -74,7 +73,7 @@ features or claim they were missing.
    real PostgreSQL verification requires the optional Docker-backed test profile.
 4. Document search: text-note ingestion, numbered passages, and per-document
    semantic retrieval are implemented; see DOCUMENTS.md. Configurable hosted
-   OpenAI-compatible or local Ollama adapters generate embeddings, stored as JSON in regular PostgreSQL and ranked
+   Google Gemini OpenAI-compatible adapter generate embeddings, stored as JSON in regular PostgreSQL and ranked
    by cosine similarity in Java. Live model verification, pgvector, and generated
    explanations with citations remain pending.
 

@@ -23,10 +23,9 @@ public class DocumentEmbeddingConfig {
         if (baseUrl.isBlank() || model.isBlank()) {
             throw new IllegalArgumentException("Enabled document embeddings require a base URL and model");
         }
-        return switch (provider) {
-            case "openai-compatible" -> new HostedPassageEmbeddingClient(baseUrl, model, apiKey);
-            case "ollama" -> new OllamaPassageEmbeddingClient(true, baseUrl, model);
-            default -> throw new IllegalArgumentException("Embedding provider must be openai-compatible or ollama");
-        };
+        if (!"openai-compatible".equals(provider)) {
+            throw new IllegalArgumentException("Embedding provider must be openai-compatible (Google Gemini)");
+        }
+        return new HostedPassageEmbeddingClient(baseUrl, model, apiKey);
     }
 }

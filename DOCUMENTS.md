@@ -49,8 +49,8 @@ which this project uses for Groq chat.
 | --- | --- | --- |
 | `document-search.embedding.enabled` | `DOCUMENT_EMBEDDINGS_ENABLED` | `false` |
 | `document-search.embedding.provider` | `DOCUMENT_EMBEDDINGS_PROVIDER` | `openai-compatible` |
-| `document-search.embedding.base-url` | `DOCUMENT_EMBEDDINGS_URL` | Empty; supply your provider's HTTPS API base URL |
-| `document-search.embedding.model` | `DOCUMENT_EMBEDDINGS_MODEL` | Empty; supply your provider's embedding model ID |
+| `document-search.embedding.base-url` | `DOCUMENT_EMBEDDINGS_URL` | `https://generativelanguage.googleapis.com/v1beta/openai` |
+| `document-search.embedding.model` | `DOCUMENT_EMBEDDINGS_MODEL` | `gemini-embedding-001` |
 | `document-search.embedding.api-key` | `DOCUMENT_EMBEDDINGS_API_KEY` | Empty; supply your embedding provider's key |
 
 The hosted adapter supports the OpenAI-compatible `POST /embeddings` contract
@@ -59,10 +59,10 @@ response `data` entries containing `index` and `embedding`. A provider using a
 different format requires a different adapter. Response indexes are validated
 and used to match vectors back to the correct passages.
 
-For example, OpenAI's base URL is `https://api.openai.com/v1`; its embedding model
-IDs include `text-embedding-3-small`. This is an example, not a configured or
-tested provider selection. See the [official embeddings API contract](https://developers.openai.com/api/reference/resources/embeddings/methods/create).
-Supply the base URL without `/embeddings`; the adapter appends that path.
+Google AI Studio (Gemini) is the selected embedding provider. Use its
+OpenAI-compatible base URL without `/embeddings`; the adapter appends that path.
+The key comes from Google AI Studio; the URL is fixed in Google's documentation:
+https://ai.google.dev/gemini-api/docs/openai#embeddings.
 
 Set the variables in the terminal or hosting environment that launches the app,
 then restart it. Keep keys out of committed files. Properties reference your
@@ -70,26 +70,21 @@ environment; they do not create the environment variables. Disabled embeddings
 need no credentials. Enabling with missing settings fails startup with a
 configuration error. Groq still uses its separate `GROQ_API_KEY` and `GROQ_MODEL`.
 
-## Optional local Ollama setup
+## Google AI Studio setup
 
-The optional adapter uses Ollama's `/api/embed` endpoint, separate from the Groq
-chat model. It is disabled by default. Install and start Ollama separately, then
-download the embedding model and enable the feature in the app's environment:
+Set these variables in the IntelliJ Run Configuration that launches the app:
 
-```sh
-ollama pull embeddinggemma
-export DOCUMENT_EMBEDDINGS_ENABLED=true
-export DOCUMENT_EMBEDDINGS_PROVIDER=ollama
-export DOCUMENT_EMBEDDINGS_URL=http://localhost:11434
-export DOCUMENT_EMBEDDINGS_MODEL=embeddinggemma
+```text
+DOCUMENT_EMBEDDINGS_ENABLED=true
+DOCUMENT_EMBEDDINGS_PROVIDER=openai-compatible
+DOCUMENT_EMBEDDINGS_URL=https://generativelanguage.googleapis.com/v1beta/openai
+DOCUMENT_EMBEDDINGS_MODEL=gemini-embedding-001
+DOCUMENT_EMBEDDINGS_API_KEY=<your Gemini API key>
 ```
 
-Restart the Spring Boot application with these variables. Ollama requires no
-embedding API key for this local setup. Hosted providers use the other adapter.
-These commands are setup instructions, not a claim that Ollama was installed or
-the model was downloaded here. In a deployed container, localhost refers to that
-container: use a reachable Ollama service for deployments. Do not point these
-settings at Groq's chat endpoint.
+Restart the application after setting them. Keep the real key out of source control.
+Embeddings stay disabled by default until enabled. A direct Gemini request was
+verified; application indexing/search and retrieval quality still need live checks.
 
 After uploading a document, index it explicitly:
 
@@ -118,9 +113,9 @@ Indexing generates vectors before entering the save transaction, and replaces
 the snapshot atomically under a document lock. Failed embedding calls preserve
 the previous index. Searches also make no provider calls inside transactions.
 Embeddings must have consistent dimensions, finite values, and nonzero length;
-malformed outputs fail rather than being stored. Ollama requests disable silent
-input truncation. Both adapters use a 5-second connection timeout and 60-second
-read timeout. Hosted provider token limits still apply.
+malformed outputs fail rather than being stored. The hosted adapter uses a
+5-second connection timeout and 60-second read timeout. Provider token limits
+still apply.
 
 If the provider URL or model changes, reindex documents. The model key includes
 an endpoint hash. If model weights change under the same name, reindex manually;
@@ -140,5 +135,4 @@ citations, evaluate retrieval quality against real notes, and optionally use
 pgvector for larger collections. Search returns source passages but does not yet
 generate an AI explanation or incorporate notes into interview feedback.
 
-Adapter contract: [Ollama embedding API](https://github.com/ollama/ollama/blob/main/docs/api.md)
-and [embedding examples](https://github.com/ollama/ollama/blob/main/docs/capabilities/embeddings.mdx).
+Adapter contract: https://ai.google.dev/gemini-api/docs/openai#embeddings.

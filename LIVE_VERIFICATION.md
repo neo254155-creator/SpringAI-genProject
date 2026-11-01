@@ -20,7 +20,7 @@ Application command-line arguments are not forwarded by this launcher.
 | --- | --- |
 | PostgreSQL | Real JDBC connection, read access to the nine application tables and Flyway history, successful V1–V4 history entries, and V4 focus columns. |
 | Groq | One small chat request using the configured provider URL, key, and model; requires a nonempty returned message. |
-| Embeddings | One short text sent through the configured hosted/Ollama adapter; requires a validated numerical vector. |
+| Embeddings | One short text sent through the configured hosted Gemini adapter; requires a validated numerical vector. |
 
 The database connection is read-only; the helper uses SELECT statements and
 rolls back. It does not create a database, run migrations, insert records, or

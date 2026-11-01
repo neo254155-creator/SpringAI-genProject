@@ -1,11 +1,29 @@
 # Implementation log
 
+## Google Gemini embedding configuration and cleanup — 2026-11-01
+
+- Configured Gemini URL/model defaults; API keys remain environment variables.
+- Removed the unused local-provider adapter and its tests; the hosted adapter
+  continues to support Google AI Studio's OpenAI-compatible embeddings endpoint.
+- Updated provider validation, configuration tests, connection checker, and current
+  setup guides. Earlier entries below describe historical implementations.
+- Removed the unused legacy chat DTO, downloaded PowerShell installer, and generated
+  HELP.md. Kept migrations, active guides, tests, and existing local work.
+- Direct provider checks: Gemini embedding API returned HTTP 200 with a 3,072-dimension
+  vector; the saved Groq key returned HTTP 401 (invalid_api_key). Full application
+  indexing/search and retrieval quality remain unverified.
+
+
 Record each completed milestone here with changes, verification, and limitations.
 Keep new entries short and easy to understand: explain what was added, each file's
 job, how to use it, its limits, and what was actually tested. Keep earlier details
 so the implementation history is not lost.
 Current user instruction: keep changes uncommitted; do not create new commits or
 push automatically. Earlier commit entries below describe the historical workflow.
+
+Verification: 7 focused embedding/configuration backend tests and 26 frontend tests
+passed. The full backend suite was interrupted after stalling during Mockito
+initialization; a complete backend-suite pass is not claimed.
 
 ## Premium frontend workspace — 2026-10-26
 

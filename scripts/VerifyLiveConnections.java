@@ -128,7 +128,7 @@ class VerifyLiveConnections {
         String provider = settings.getProperty("document-search.embedding.provider", "openai-compatible");
         String url = required("document-search.embedding.base-url", "Set the embedding provider URL.");
         String model = required("document-search.embedding.model", "Set the embedding model.");
-        String key = "ollama".equals(provider) ? "" : required("document-search.embedding.api-key", "Set the embedding provider API key.");
+        String key = required("document-search.embedding.api-key", "Set DOCUMENT_EMBEDDINGS_API_KEY to your Gemini API key.");
         var adapter = new DocumentEmbeddingConfig().passageEmbeddingClient(true, provider, url, model, key);
         var vectors = adapter.embed(List.of("A Java interface defines a contract."));
         return "the configured adapter returned a validated embedding with " + vectors.getFirst().length + " dimensions.";

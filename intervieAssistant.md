@@ -154,7 +154,6 @@ InterviewHistoryStore, InterviewFeedbackRepository, and PERSISTENCE.md.
 | Browse documents | Paginated document listing, metadata retrieval, and ordered passage retrieval. These operations do not call AI. |
 | Explicit indexing | A separate request embeds all passages and saves their vectors. Upload/startup alone does not generate embeddings. |
 | Hosted embedding adapter | Supports an OpenAI-compatible /embeddings API with bearer authentication and configurable URL/model/key. |
-| Optional Ollama adapter | Supports a separately running Ollama /api/embed service. Local embeddinggemma is a documented setup option, not a verified installed/configured model. |
 | Optional embeddings | Disabled by default; disabled search/index requests return an explicit unavailable error. Enabling requires valid provider configuration. |
 | Vector validation | Checks response/passages alignment, dimensions, finite values, and nonzero vector norms before saving normalized vectors. |
 | Vector storage | Saves vectors as JSON in regular PostgreSQL with dimensions, index time, and model/endpoint identity. pgvector is not used. |
@@ -164,7 +163,7 @@ InterviewHistoryStore, InterviewFeedbackRepository, and PERSISTENCE.md.
 | Source references | Results contain document ID/title, query, passage IDs/numbers/text, and similarity scores. Similarity is not confidence or proof of an answer. |
 | Safe reindexing | Generates embeddings outside transactions, then atomically replaces the saved index under a document lock. Provider failures retain the previous index. |
 | Compatibility detection | Missing/incompatible indexes or dimensions require reindexing. Changing model weights under the same identity is not detected automatically. |
-| Provider timeouts | Embedding adapters use a 5-second connection timeout and 60-second read timeout. Ollama requests disable silent input truncation. Hosted provider input limits still apply. |
+| Provider timeouts | Embedding adapters use a 5-second connection timeout and 60-second read timeout. Hosted provider input limits still apply. |
 
 There is no document frontend yet. Search returns source passages; it does not
 generate an explanation with citations or incorporate notes into interview feedback.
