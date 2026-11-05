@@ -5,7 +5,7 @@ export async function renderDocuments(root) {
   const client = new DocumentsClient(), flow = new DocumentFlow(client);
   let selected = null, page = 0, totalPages = 0, controller = null;
   root.innerHTML = `
-    <div class="page-heading"><div><span class="eyebrow">A LITTLE CONTEXT GOES A LONG WAY</span>
+    <div class="page-heading"><div>
       <h1>Learn from your notes.</h1><p>Optional study support for your résumé interview practice.</p></div>
       <a class="btn secondary" href="/practice.html">${icon("chat")} Résumé interview</a></div>
     <div class="notes-layout">

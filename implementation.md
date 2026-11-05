@@ -22,6 +22,9 @@ Main flow: upload résumé → confirm extracted skills → choose difficulty �
 - 2026-11-02: added username/password accounts, session/CSRF protection, private ownership, and V7; the first local account receives legacy data once, as requested.
 - 2026-11-05: verified the packaged résumé/account flow and restart recovery; kept the local C/C++ and missing-difficulty fixes. Connection checks now skip AI by default.
 - 2026-11-05: prepared Secure production cookies and JDBC sessions (V8); publishing waits until after UI work. File explanations: [FILE_GUIDE.md](FILE_GUIDE.md).
+- 2026-11-05: deployed [Intervie](https://intervie-genproject.vercel.app) on Vercel. Fixed cold starts with runtime settings; hosted login/privacy/reload/logout passed. Test accounts removed; zero AI calls.
+
+- 2026-11-05: removed decorative badges, invented preview metrics, promotional filler and internal setup/roadmap notes; kept real statuses and privacy details. No new project files or AI calls.
 
 ## Verification
 
@@ -32,11 +35,11 @@ Main flow: upload résumé → confirm extracted skills → choose difficulty �
 
 ## Next
 
-1. Enhance the UI while preserving the agreed résumé-to-progress flow.
-2. After UI work: build/run the container, configure platform rate limits, verify the hosted preview, then publish.
+Enhance the UI while preserving the agreed résumé-to-progress flow; test updates before redeploying.
 Extra memory, AI tools, study-task management and note integration are deferred.
 
 ## Working agreement
 
 Keep task notes brief. Commit and push after every two completed tasks.
+Batch complete: deployment + UI copy cleanup; reviewed and committed together.
 Keep [FILE_GUIDE.md](FILE_GUIDE.md) current as files change; this log stays brief.

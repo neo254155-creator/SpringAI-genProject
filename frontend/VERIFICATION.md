@@ -1,5 +1,16 @@
 # Frontend verification
 
+## UI cleanup — 2026-11-05
+
+- Removed decorative badges, sample metrics and internal setup/roadmap copy. Homepage/login passed at 1440/390/320px; 56 client tests and the résumé browser journey passed with fixtures. No live AI calls.
+
+## Vercel production — 2026-11-05
+
+- `https://intervie-genproject.vercel.app` is public and served from deployment `dpl_FWDFieEZbYmLkJuC4EVkiytT49sL`, reviewed commit `a91c69f`. Vercel built the Java 21 container successfully.
+- Fixed observed startup timeouts with lazy initialization/repositories, C1 JVM compilation and one-time release migrations (V1–V8 were already verified on Neon). JPA schema validation stays enabled; see VERCEL.md before future schema releases.
+- Browser checks passed: landing/assets, same-origin configuration, login redirect, registration/login, Secure/HttpOnly/SameSite cookies, CSRF denial, empty private history/progress, foreign-session 404, authenticated reload and logout. The public primary domain also passed in a fresh browser without Vercel cookies. Latest-deployment error/fatal logs were empty in the final checked window.
+- Disposable test accounts/sessions and the final temporary share link were removed. Existing account/history preserved. No Groq/Gemini generation calls ran; hosted AI output is not verified by these checks. Transient test-client transport/assertion problems were corrected without changing product code.
+
 ## Essential flow — 2026-11-05
 
 - 173 default offline backend tests and 56 client tests passed. The executable JAR packaged successfully; a running-JAR file lock required building the verification artifact in a separate folder.

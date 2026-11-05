@@ -1760,3 +1760,9 @@ html[data-motion="off"] .reveal {
     flex-wrap: wrap;
   }
 }
+
+/* Landing page: the actual practice flow, without sample scores. */
+.practice-outline { padding-left: 22px; margin: 24px 0; }
+.practice-outline li { padding-left: 8px; margin-bottom: 20px; }
+.practice-outline li::marker { color: var(--accent); }
+.practice-outline p { margin: 6px 0 0; color: var(--muted); line-height: 1.6; }

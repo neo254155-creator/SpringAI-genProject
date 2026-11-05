@@ -1,5 +1,11 @@
 # Deploy to Vercel
 
+Live: [Intervie](https://intervie-genproject.vercel.app), project `intervie-genproject`
+in workspace `neo254155-4565`. Verified production deployment:
+`dpl_FWDFieEZbYmLkJuC4EVkiytT49sL`, commit `a91c69f` (2026-11-05).
+Main-branch pushes deploy automatically. The primary URL is public; preview and
+unique deployment URLs keep Vercel Authentication. App sign-in protects user data.
+
 Vercel detects `Dockerfile.vercel` at the project root. Set the Vercel Root
 Directory to the folder containing this file and `pom.xml`.
 
@@ -14,6 +20,10 @@ Set these in the Vercel project's environment settings before deploying:
 | --- | --- |
 | `PORT` | `8080` (match the application's listening port) |
 | `SPRING_PROFILES_ACTIVE` | `production` (requires HTTPS; JDBC sessions and Secure cookies) |
+| `SPRING_MAIN_LAZY_INITIALIZATION` | `true` (reduces cold-start work) |
+| `SPRING_DATA_JPA_REPOSITORIES_BOOTSTRAP_MODE` | `lazy` |
+| `JAVA_TOOL_OPTIONS` | `-XX:+TieredCompilation -XX:TieredStopAtLevel=1` (faster JVM startup) |
+| `SPRING_FLYWAY_ENABLED` | `false` on Vercel only; run reviewed migrations once before release as below |
 | `DB_URL` | Your hosted PostgreSQL JDBC URL, e.g. `jdbc:postgresql://YOUR_HOST/InterviewData?sslmode=require`; use the actual hosted database name |
 | `DB_USER` | Hosted PostgreSQL username |
 | `DB_PASSWORD` | Hosted PostgreSQL password |
@@ -28,32 +38,37 @@ The interview question/answer/feedback screen does not require embeddings.
 
 Use a reachable hosted PostgreSQL database, such as Neon. `localhost` inside
 Vercel refers to the container, not your computer. This Dockerfile does not
-create or move a database. Flyway applies pending migrations on app startup
-using the supplied database credentials. Local `.local/database.properties`
+create or move a database. Local startup still applies Flyway migrations. On Vercel,
+run migrations once before release instead of on every short-lived instance:
+start the reviewed version locally with the same Neon settings and Flyway enabled,
+then run the database-only connection check before deploying. V1–V8 are already
+applied. Keep JPA schema validation enabled; do not bypass schema errors.
+Local `.local/database.properties`
 and other files outside the build allowlist are excluded from the image context.
 
 Deploy through your connected Vercel Git repository or run `vercel deploy`
 from this directory with an authenticated Vercel CLI. These instructions do
 not mean a deployment has been performed or verified.
 
-Publishing is deferred until the UI work is finished. Before publishing, create
+Deployment is now requested before UI improvements. Before publishing, create
 your first account locally against the hosted database and confirm legacy ownership.
 Remote/forwarded first-account setup is deliberately blocked. The production
 profile requires explicit DB settings, uses at most three database connections
 per instance, and shares sign-in/CSRF state using V8's Spring Session JDBC tables.
 Keep the API and frontend on one HTTPS origin. Do not disable Secure cookies online.
 
-Configure a shared platform rate limit for `POST /auth/login` and
-`POST /auth/register` before opening public registration; the in-process limiter
-does not share counters between instances. Verify login/logout, account isolation
-and saved progress on a preview deployment before publishing. Runtime/provider
-limits still need checking on the chosen hosting account.
+The app's authentication throttle is active. Shared platform-wide limits are not
+configured by this deployment; the in-process limiter does not share counters
+between instances. Plan additional limits before a larger public rollout.
+Hosted registration/login, cookie flags, account isolation, reload and logout
+passed with disposable accounts, which were removed. No AI-generation request ran;
+hosted Groq/Gemini generation remains untested to preserve the free-tier quota.
 
-The application JAR and local/production browser journeys were verified. Docker
-image build/run remains unverified because no Docker CLI/daemon is available here.
+The application JAR and local/production browser journeys were verified. Vercel
+successfully built and ran the Docker image; no local Docker installation was needed.
 Authenticated database sessions passed the disposable H2 restart check. Neon V8,
 production cookie flags, anonymous CSRF-session restart and logout cleanup also
-passed. Authenticated hosted-session behavior still needs a preview check.
+passed. Hosted authenticated requests, reload, history isolation and logout passed.
 
 For a local image build with Docker installed:
 

@@ -1,5 +1,8 @@
 # genProject
 
+Live website: [Intervie](https://intervie-genproject.vercel.app). Use your existing
+account; the hosted app uses the same Neon database. Main-branch pushes redeploy it.
+
 Java 21, Spring Boot 4.1.1, and Spring AI 2.0.1 application using Groq's
 OpenAI-compatible API. See [implementation.md](implementation.md) for completed
 milestones and pending work. See [PROJECT_REVIEW.md](PROJECT_REVIEW.md) for the
