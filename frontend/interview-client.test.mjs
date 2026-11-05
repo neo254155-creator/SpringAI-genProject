@@ -79,13 +79,15 @@ test('rejects invalid answers and premature next-question requests without sendi
 });
 
 test('prevents duplicate in-flight submissions and repeat submission after feedback', async () => {
-  let release;
+  let release, sent;
+  const requested = new Promise(resolve => { sent = resolve; });
   const api = scripted([ok(session), ok(question)]);
   const flow = new InterviewFlow(api.fetcher);
   await flow.start(selection);
-  flow.fetcher = () => new Promise(resolve => { release = resolve; });
+  flow.fetcher = () => new Promise(resolve => { release = resolve; sent(); });
   const pending = flow.submit('answer');
   await assert.rejects(flow.submit('answer'), /Please wait/);
+  await requested;
   release(ok(savedAnswer));
   await pending;
   await assert.rejects(flow.submit('answer'), /no unanswered question/);

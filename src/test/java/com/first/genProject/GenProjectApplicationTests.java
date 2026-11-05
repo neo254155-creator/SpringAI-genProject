@@ -30,12 +30,14 @@ import com.first.genProject.support.StubChatModel;
 /** Exercises actual MVC wiring while replacing the provider with a local model. */
 @ActiveProfiles("test")
 @TestPropertySource(locations = "classpath:application-test.properties")
+@org.springframework.security.test.context.support.WithMockUser(username = com.first.genProject.support.AccountTestConfiguration.ID)
+@Import({com.first.genProject.support.AccountTestConfiguration.class, GenProjectApplicationTests.OfflineAiConfiguration.class})
 @SpringBootTest(properties = {
         "spring.ai.openai.api-key=offline-test-key",
         "spring.ai.openai.chat.model=offline-test-model"
 })
 @AutoConfigureMockMvc
-@Import(GenProjectApplicationTests.OfflineAiConfiguration.class)
+
 class GenProjectApplicationTests {
     @Autowired
     private MockMvc mvc;

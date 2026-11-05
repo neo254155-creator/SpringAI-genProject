@@ -7,6 +7,12 @@ current code review and remaining roadmap.
 
 ## Run
 
+Sign-in and private account ownership are implemented. After starting the updated
+server, create your first account at `http://localhost:8080/login.html`; it receives
+the existing shared history once, as requested. See PERSISTENCE.md for setup and
+cookie/CSRF details. The API examples below require an authenticated session and
+the CSRF header returned by `/auth/csrf`, including the billable GET `/chat`.
+
 The application now requires PostgreSQL. See [PERSISTENCE.md](PERSISTENCE.md) for
 local `InterviewData` database setup, stored-session APIs, and progress queries.
 The Windows setup script is `scripts/setup-local-postgres.ps1`; it creates the

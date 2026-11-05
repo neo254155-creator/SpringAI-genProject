@@ -11,6 +11,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Entity
 @Table(name = "interview_sessions")
 public class InterviewSessionEntity {
+    @Column(name = "owner_id") private UUID ownerId;
+    public UUID getOwnerId() { return ownerId; }
+    public void setOwnerId(UUID id) { ownerId = id; }
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     @Column(nullable = false, length = 100)

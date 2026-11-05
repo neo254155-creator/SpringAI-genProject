@@ -8,6 +8,9 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "study_documents")
 public class StudyDocumentEntity {
+    @Column(name = "owner_id") private UUID ownerId;
+    public UUID getOwnerId() { return ownerId; }
+    public void setOwnerId(UUID id) { ownerId = id; }
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     @Column(nullable = false, length = 200)

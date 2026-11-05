@@ -14,7 +14,7 @@ export async function renderDocuments(root) {
           <form id="notes-upload" class="notes-form">
             <label for="notes-title">Document title</label><input id="notes-title" name="title" maxlength="200" required placeholder="e.g. Spring Boot revision" />
             <label for="notes-file">Text or Markdown file</label><input id="notes-file" name="file" type="file" accept=".txt,.md" required />
-            <p class="tiny muted">UTF-8 TXT or MD · up to 64 KiB. Upload saves text without calling AI. This workspace is shared.</p>
+            <p class="tiny muted">UTF-8 TXT or MD · up to 64 KiB. Upload saves text without calling AI. Saved notes belong to your account.</p>
             <button class="btn" type="submit">${icon("book")} Save notes</button>
           </form></section>
         <section class="panel"><div class="panel-head"><h2>Saved notes</h2>
@@ -44,7 +44,7 @@ export async function renderDocuments(root) {
           <h2 id="notes-answer-title" tabindex="-1">Answer from your notes</h2>
           <p id="notes-answer-query" class="tiny muted"></p>
           <p id="notes-answer-text"></p><div id="notes-sources"></div>
-          <p class="tiny muted">Check the excerpts yourself: a valid source ID does not prove that every claim is supported. Generated answers are not saved after refresh.</p>
+          <p class="tiny muted">Check the excerpts yourself: a valid source ID does not prove that every claim is supported. Answers leave this screen on refresh; the server keeps a copy for safe retries.</p>
         </section></section></div>`;
   const field = (id) => root.querySelector(`#${id}`);
   function syncControls() {

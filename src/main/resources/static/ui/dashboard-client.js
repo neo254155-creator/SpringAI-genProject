@@ -1,7 +1,8 @@
+import { appFetch } from "./auth-client.js";
 import { HistoryClient } from "../history-client.js";
 import { requestJson } from "../interview-client.js";
 export class DashboardClient {
-  constructor(fetcher = globalThis.fetch) {
+  constructor(fetcher = appFetch) {
     this.fetcher = fetcher;
     this.history = new HistoryClient(fetcher);
   }

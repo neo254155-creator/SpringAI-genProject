@@ -56,8 +56,7 @@ features or claim they were missing.
   typed feedback with a validated rubric and a Java-calculated score out of 10.
 - Original `/questions` and `/feedback` routes remain stateless. New session routes
   persist questions, answer attempts, and feedback; see `PERSISTENCE.md`.
-- Session progress aggregates saved attempts and scores by topic/level. There is
-  no authentication or per-user data separation yet.
+- Session progress aggregates saved attempts and scores by topic/level for the signed-in account. Username/password sessions, CSRF and ownership checks are implemented.
 - Frontend output is inserted as text. Cancelling a browser request does not
   guarantee cancellation of an already-running provider call.
 
@@ -75,7 +74,7 @@ features or claim they were missing.
    semantic retrieval are implemented; see DOCUMENTS.md. Configurable hosted
    Google Gemini OpenAI-compatible adapter generate embeddings, stored as JSON in regular PostgreSQL and ranked
    by cosine similarity in Java. Live model verification, pgvector, and generated
-   explanations with citations remain pending.
+   explanations with checked citation IDs now exist; live source-support evaluation remains pending.
 
 The interview question/answer/feedback screen, history/progress dashboard, and
 saved-session resume are implemented. Verified application deployment remains
@@ -84,9 +83,9 @@ Dockerfile.vercel now supplies an application image build definition; an actual
 container build and deployed site have not been verified. Quality evaluation is pending.
 
 Weakness-targeted questions now use the latest session feedback and up to five
-recent questions; see ADAPTIVE_INTERVIEWS.md. Résumé skill extraction, full
-conversation memory, and AI-invokable Java tools for previous scores/study tasks
-remain pending. Previous scores can be read through history/progress APIs.
+recent questions; see ADAPTIVE_INTERVIEWS.md. Résumé skill extraction and confirmation
+are implemented. Full conversation memory and AI-invokable Java tools for previous
+scores/study tasks remain pending. Previous scores are available through history/progress APIs.
 
 ## Verification limits
 

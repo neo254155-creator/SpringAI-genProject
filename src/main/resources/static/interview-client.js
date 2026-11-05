@@ -1,4 +1,6 @@
+import { appFetch } from "./ui/auth-client.js";
 import { apiUrl } from "./ui/api-config.js";
+import { retryKeys } from "./ui/retry-keys.js";
 
 /** Session workflow shared by the browser UI and offline workflow tests. */
 function validFeedback(feedback) {
@@ -29,18 +31,29 @@ function validFeedback(feedback) {
 
 export async function requestJson(
   path,
-  { method = "GET", body, signal, fetcher = globalThis.fetch } = {},
+  { method = "GET", body, signal, fetcher = appFetch, validate = value => value, keys = retryKeys,
+    headers = {}, onResponse = () => {} } = {},
 ) {
-  const response = await fetcher(apiUrl(path), {
+  const multipart = body instanceof FormData;
+  const payload = body === undefined ? undefined : multipart ? body : JSON.stringify(body);
+  const url = apiUrl(path);
+  const attempt = method === "POST" ? await keys.begin(url, payload) : null;
+  const response = await fetcher(url, {
     method,
     signal,
     headers: {
       Accept: "application/json",
-      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      ...headers,
+      ...(body === undefined || multipart ? {} : { "Content-Type": "application/json" }),
+      ...(attempt ? { "Idempotency-Key": attempt.key } : {}),
     },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    ...(payload === undefined ? {} : { body: payload }),
   });
-  return readJsonResponse(response);
+  if (!response.ok && response.headers?.get("Idempotency-Status") === "failed") attempt?.finish();
+  const result = validate(await readJsonResponse(response));
+  onResponse(response);
+  attempt?.finish();
+  return result;
 }
 
 export async function readJsonResponse(response) {
@@ -65,12 +78,13 @@ export class InterviewFlow {
   busy = false;
   answered = 0;
 
-  constructor(fetcher = globalThis.fetch) {
+  constructor(fetcher = appFetch, keys = retryKeys) {
     this.fetcher = fetcher;
+    this.keys = keys;
   }
 
-  async #request(path, method, body, signal) {
-    return requestJson(path, { method, body, signal, fetcher: this.fetcher });
+  async #request(path, method, body, signal, validate, options = {}) {
+    return requestJson(path, { method, body, signal, fetcher: this.fetcher, validate, keys: this.keys, ...options });
   }
 
   async #run(action) {
@@ -102,9 +116,10 @@ export class InterviewFlow {
         throw new Error(
           "Finish the current interview before starting another.",
         );
-      const session = await this.#request(path, "POST", selection, signal);
-      if (!session?.id || session.status !== "ACTIVE")
-        throw new Error("The server did not return an active session.");
+      const session = await this.#request(path, "POST", selection, signal, value => {
+        if (!value?.id || value.status !== "ACTIVE") throw new Error("The server did not return an active session.");
+        return value;
+      });
       this.session = session;
       onCreated?.(session);
       // Retain the session if question generation fails; retry must not create another.
@@ -116,11 +131,16 @@ export class InterviewFlow {
     return this.#run(async () => {
       if (this.session)
         throw new Error("An interview is already open in this screen.");
+      const pendingQuestion = await this.keys.lookup(apiUrl(`/interview/sessions/${encodeURIComponent(id)}/questions`));
+      let replayState;
       const result = await this.#request(
         `/interview/sessions/${encodeURIComponent(id)}/resume`,
         "GET",
         undefined,
         signal,
+        undefined,
+        { headers: pendingQuestion ? { "Idempotency-Key": pendingQuestion.key } : {},
+          onResponse: response => { replayState = response.headers?.get("Idempotency-Status"); } },
       );
       if (
         !result?.session ||
@@ -141,6 +161,7 @@ export class InterviewFlow {
         throw new Error("The server did not return a valid saved session.");
       }
       this.session = result.session;
+      if (["completed", "failed"].includes(replayState)) pendingQuestion?.finish();
       this.question = result.question;
       this.feedback = result.answer?.feedback ?? null;
       this.savedAnswer = result.answer?.answer ?? "";
@@ -165,15 +186,12 @@ export class InterviewFlow {
       "POST",
       undefined,
       signal,
+      value => {
+        if (!value?.id || value.sessionId !== this.session.id || typeof value.question !== "string" || !value.question.trim())
+          throw new Error("The server did not return a valid question.");
+        return value;
+      },
     );
-    if (
-      !question?.id ||
-      question.sessionId !== this.session.id ||
-      typeof question.question !== "string" ||
-      !question.question.trim()
-    ) {
-      throw new Error("The server did not return a valid question.");
-    }
     this.question = question;
     this.feedback = null;
     this.savedAnswer = "";
@@ -196,11 +214,13 @@ export class InterviewFlow {
         "POST",
         { answer },
         signal,
+        value => {
+          if (value?.questionId !== this.question.id || !validFeedback(value.feedback))
+            throw new Error("The server did not return valid feedback.");
+          return value;
+        },
       );
       const feedback = result?.feedback;
-      if (result?.questionId !== this.question.id || !validFeedback(feedback)) {
-        throw new Error("The server did not return valid feedback.");
-      }
       this.feedback = feedback;
       this.savedAnswer = answer;
       this.answered++;
@@ -215,9 +235,12 @@ export class InterviewFlow {
         "POST",
         undefined,
         signal,
+        value => {
+          if (value?.id !== this.session.id || value.status !== "COMPLETED")
+            throw new Error("Could not confirm session completion.");
+          return value;
+        },
       );
-      if (result?.id !== this.session.id || result.status !== "COMPLETED")
-        throw new Error("Could not confirm session completion.");
       this.session = result;
     });
   }

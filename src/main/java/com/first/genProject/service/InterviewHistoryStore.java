@@ -18,23 +18,27 @@ public class InterviewHistoryStore {
     private final InterviewQuestionRepository questions;
     private final InterviewAnswerRepository answers;
     private final InterviewFeedbackRepository feedback;
+    private final com.first.genProject.auth.CurrentAccount current;
 
     public InterviewHistoryStore(InterviewSessionRepository sessions, InterviewQuestionRepository questions,
-            InterviewAnswerRepository answers, InterviewFeedbackRepository feedback) {
+            InterviewAnswerRepository answers, InterviewFeedbackRepository feedback, com.first.genProject.auth.CurrentAccount current) {
         this.sessions = sessions;
         this.questions = questions;
         this.answers = answers;
         this.feedback = feedback;
+        this.current = current;
     }
 
     @Transactional
     public SessionResponse create(InterviewSelection selection) {
-        return sessionView(sessions.save(new InterviewSessionEntity(selection)));
+        var entity = new InterviewSessionEntity(selection); entity.setOwnerId(current.id());
+        return sessionView(sessions.save(entity));
     }
 
     @Transactional
     public SessionResponse createResume(ResumeInterviewContext context, String level) {
-        return sessionView(sessions.save(new InterviewSessionEntity(context, level)));
+        var entity = new InterviewSessionEntity(context, level); entity.setOwnerId(current.id());
+        return sessionView(sessions.save(entity));
     }
 
     @Transactional(readOnly = true)
@@ -68,7 +72,7 @@ public class InterviewHistoryStore {
 
     @Transactional(readOnly = true)
     public PageResponse<SessionResponse> sessions(int page, int size) {
-        return pageView(sessions.findAll(pageRequest(page, size, "createdAt")).map(this::sessionView));
+        return pageView(sessions.findByOwnerId(current.id(), pageRequest(page, size, "createdAt")).map(this::sessionView));
     }
 
     @Transactional(readOnly = true)
@@ -130,18 +134,20 @@ public class InterviewHistoryStore {
     }
 
     @Transactional(readOnly = true)
-    public List<TopicProgress> progress() { return feedback.topicProgress(); }
+    public List<TopicProgress> progress() { return feedback.topicProgress(current.id()); }
 
     private InterviewSessionEntity loadSession(UUID id) {
-        return sessions.findById(id).orElseThrow(() -> new InterviewNotFoundException("Session"));
+        return sessions.findByIdAndOwnerId(id, current.id()).orElseThrow(() -> new InterviewNotFoundException("Session"));
     }
 
     private InterviewSessionEntity lockSession(UUID id) {
-        return sessions.findForUpdate(id).orElseThrow(() -> new InterviewNotFoundException("Session"));
+        return sessions.findOwnedForUpdate(id, current.id()).orElseThrow(() -> new InterviewNotFoundException("Session"));
     }
 
     private InterviewQuestionEntity loadQuestion(UUID id) {
-        return questions.findById(id).orElseThrow(() -> new InterviewNotFoundException("Question"));
+        var question = questions.findById(id).orElseThrow(() -> new InterviewNotFoundException("Question"));
+        if (!current.id().equals(question.getSession().getOwnerId())) throw new InterviewNotFoundException("Question");
+        return question;
     }
 
     private void requireActive(InterviewSessionEntity session) {

@@ -14,15 +14,17 @@ public class DocumentIndexStore {
     private final StudyDocumentRepository documents;
     private final DocumentSearchIndexRepository indexes;
     private final JsonMapper json = JsonMapper.builder().build();
+    private final com.first.genProject.auth.CurrentAccount current;
 
-    public DocumentIndexStore(StudyDocumentRepository documents, DocumentSearchIndexRepository indexes) {
+    public DocumentIndexStore(StudyDocumentRepository documents, DocumentSearchIndexRepository indexes, com.first.genProject.auth.CurrentAccount current) {
         this.documents = documents;
         this.indexes = indexes;
+        this.current = current;
     }
 
     @Transactional
     public DocumentIndexResponse replace(UUID id, String modelKey, List<PassageVector> vectors) {
-        documents.findForUpdate(id).orElseThrow(() -> new InterviewNotFoundException("Document"));
+        documents.findOwnedForUpdate(id, current.id()).orElseThrow(() -> new InterviewNotFoundException("Document"));
         var index = indexes.save(new DocumentSearchIndexEntity(id, modelKey,
                 vectors.getFirst().vector().length, json.writeValueAsString(vectors)));
         return new DocumentIndexResponse(id, modelKey, index.getDimensions(), vectors.size(), index.getIndexedAt());
@@ -30,6 +32,7 @@ public class DocumentIndexStore {
 
     @Transactional(readOnly = true)
     public IndexSnapshot load(UUID id) {
+        documents.findByIdAndOwnerId(id, current.id()).orElseThrow(() -> new InterviewNotFoundException("Document"));
         var index = indexes.findById(id).orElseThrow(() ->
                 new DocumentSearchException(DocumentSearchException.Reason.INDEX_NOT_READY));
         return new IndexSnapshot(index.getModelKey(), index.getDimensions(),

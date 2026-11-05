@@ -37,6 +37,7 @@ const improvedFeedback = { ...firstFeedback, score: 10, missingPoints: [],
 const counts = { upload: 0, session: 0, question: 0, answer: 0, complete: 0 };
 const unexpected = [], questions = [], answers = [];
 let session = null, failFirstQuestion = true, quotaOnce = true, browser, page, stage = "startup";
+let signedIn = true, username = "learner", csrfVersion = 0;
 const pageOf = (items, url) => {
   const page = Number(url.searchParams.get("page") || 0), size = Number(url.searchParams.get("size") || 20);
   return { content: items.slice(page * size, (page + 1) * size), page, size,
@@ -44,9 +45,24 @@ const pageOf = (items, url) => {
 };
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost"), p = url.pathname, method = req.method;
-  const json = (data, status = 200) => res.writeHead(status, { "Content-Type": "application/json" }).end(JSON.stringify(data));
+  const json = (data, status = 200) => res.writeHead(status, { "Content-Type": "application/json",
+    ...(method === "POST" ? { "Idempotency-Status": status < 400 ? "completed" : "failed" } : {}) }).end(JSON.stringify(data));
   const body = async () => { let raw = ""; for await (const chunk of req) raw += chunk; return raw; };
   try {
+    if (method === "POST" && !p.startsWith("/auth/")) assert.match(req.headers["idempotency-key"] || "", /^[0-9a-f-]{36}$/i);
+    if (p === "/auth/csrf") return json({ headerName: "X-CSRF-TOKEN", token: `fixture-csrf-${csrfVersion}` });
+    if (p === "/auth/me") return signedIn ? json({ id: "fixture-user", username }) : json({ detail: "Please sign in." }, 401);
+    if (method === "POST") assert.equal(req.headers["x-csrf-token"], `fixture-csrf-${csrfVersion}`);
+    if (p === "/auth/logout" && method === "POST") { signedIn = false; csrfVersion++; return json(undefined, 204); }
+    if (p === "/auth/register" && method === "POST") {
+      const credentials = JSON.parse(await body()); username = credentials.username;
+      return json({ id: "fixture-user", username }, 201);
+    }
+    if (p === "/auth/login" && method === "POST") {
+      const credentials = JSON.parse(await body());
+      if (credentials.password !== "Offline browser password!") return json({ detail: "Invalid username or password." }, 401);
+      signedIn = true; csrfVersion++; return json({ id: "fixture-user", username });
+    }
     if (p === "/frontend-config" && method === "GET") return json({ apiBaseUrl: "" });
     if (p === "/resumes" && method === "POST") {
       counts.upload++;
@@ -214,6 +230,30 @@ try {
   await waitText(page.locator(".stat-card").filter({ hasText: "Questions answered" }), "2");
   await waitText(page.locator("#dashboard-data"), "10/10");
   assert.deepEqual(counts, afterCompletion, "saved history and dashboards must not call AI or mutate sessions");
+  stage = "sign-out, sign-in and account creation";
+  const signOutUi = async () => {
+    if (await page.locator("#open-nav").isVisible()) await page.locator("#open-nav").click();
+    await page.locator("#sign-out").click(); await page.waitForURL("**/login.html");
+  };
+  await signOutUi();
+  await page.goto(origin + "/practice.html?session=" + session.id); await page.waitForURL("**/login.html?next=*");
+  await page.getByLabel("Username", { exact: true }).fill("learner");
+  await page.getByLabel("Password", { exact: true }).fill("wrong-password");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await waitText(page.locator("#auth-error"), "Invalid username or password");
+  await page.getByLabel("Password", { exact: true }).fill("Offline browser password!");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await coach.locator("#new").waitFor({ state: "visible" });
+  await signOutUi();
+  await page.getByRole("button", { name: "Create an account", exact: true }).click();
+  await page.getByLabel("Username", { exact: true }).fill("new-learner");
+  await page.getByLabel("Password", { exact: true }).fill("Offline browser password!");
+  await noOverflow("login at 320px");
+  await page.screenshot({ path: path.join(artifacts, "account-mobile.png"), fullPage: true, animations: "disabled" });
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await setup.locator("#extract").waitFor({ state: "visible" });
+  assert.equal(await page.locator("#account-name").innerText(), "new-learner");
+  assert.deepEqual(counts, afterCompletion, "account actions must not use AI");
   assert.deepEqual(unexpected, []); assert.deepEqual(errors, []);
   console.log("PASS: upload → confirmed skills → difficulty → questions → scored feedback → weakness practice → saved history/progress; refresh, explicit retries, quota error and mobile checks. Stateful fixtures only; zero live AI calls.");
 } catch (error) {

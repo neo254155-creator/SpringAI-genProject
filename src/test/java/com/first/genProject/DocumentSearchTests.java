@@ -27,12 +27,14 @@ import com.first.genProject.exception.DocumentSearchException;
 import com.first.genProject.persistence.*;
 import com.first.genProject.support.StubChatModel;
 
+@org.springframework.security.test.context.support.WithMockUser(username = com.first.genProject.support.AccountTestConfiguration.ID)
+@Import({com.first.genProject.support.AccountTestConfiguration.class, DocumentSearchTests.OfflineConfiguration.class})
 @SpringBootTest(properties = {"spring.ai.openai.api-key=offline-test-key", "spring.ai.openai.chat.model=offline-test-model"})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestPropertySource(locations = "classpath:application-test.properties", properties =
         "spring.datasource.url=jdbc:h2:mem:document-search-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
-@Import(DocumentSearchTests.OfflineConfiguration.class)
+
 class DocumentSearchTests {
     @Autowired MockMvc mvc;
     @Autowired FakeEmbeddings embeddings;
@@ -40,10 +42,12 @@ class DocumentSearchTests {
     @Autowired StudyDocumentRepository documents;
     @Autowired StudyPassageRepository passages;
     @Autowired DocumentSearchIndexRepository indexes;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final JsonMapper json = JsonMapper.builder().build();
 
     @BeforeEach
     void reset() {
+        jdbc.update("delete from request_replays");
         indexes.deleteAll();
         passages.deleteAll();
         documents.deleteAll();
@@ -54,6 +58,33 @@ class DocumentSearchTests {
         embeddings.dimensionChange = false;
         embeddings.oppositeQuery = false;
         chat.calls = 0;
+    }
+
+    @Test
+    void keyedUploadIndexAndAnswerRetriesDoNotRepeatEitherProvider() throws Exception {
+        String uploadKey = UUID.randomUUID().toString();
+        var file = new MockMultipartFile("file", "notes.txt", "text/plain",
+                "An interface defines a contract.".getBytes(StandardCharsets.UTF_8));
+        String path = mvc.perform(multipart("/documents").file(file).param("title", "Java notes")
+                .header("Idempotency-Key", uploadKey)).andExpect(status().isCreated())
+                .andReturn().getResponse().getHeader("Location");
+        mvc.perform(multipart("/documents").file(file).param("title", "Java notes").header("Idempotency-Key", uploadKey))
+                .andExpect(status().isCreated()).andExpect(header().string("Location", path));
+        assertEquals(1, documents.count());
+        String indexKey = UUID.randomUUID().toString();
+        for (int i = 0; i < 2; i++) mvc.perform(post(path + "/index").header("Idempotency-Key", indexKey))
+                .andExpect(status().isOk());
+        assertEquals(1, embeddings.calls);
+        UUID id = UUID.fromString(path.substring("/documents/".length()));
+        String passageId = passages.findByDocument_IdOrderByPassageNumberAsc(id).getFirst().getId().toString();
+        chat.response = "{\"answer\":\"An interface defines a contract.\",\"passageIds\":[\"" + passageId
+                + "\"],\"insufficientEvidence\":false}";
+        String answerKey = UUID.randomUUID().toString();
+        for (int i = 0; i < 2; i++) mvc.perform(post(path + "/answer").header("Idempotency-Key", answerKey)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"query\":\"What is an interface?\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.sources[0].passageId").value(passageId));
+        assertEquals(2, embeddings.calls, "One index and one query embedding; no replay calls");
+        assertEquals(1, chat.calls);
     }
 
     @Test

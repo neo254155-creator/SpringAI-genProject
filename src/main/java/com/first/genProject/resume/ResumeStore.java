@@ -9,13 +9,15 @@ import com.first.genProject.exception.InterviewNotFoundException;
 @Service
 public class ResumeStore {
     private final ResumeRepository repository;
-    public ResumeStore(ResumeRepository repository) { this.repository = repository; }
+    private final com.first.genProject.auth.CurrentAccount current;
+    public ResumeStore(ResumeRepository repository, com.first.genProject.auth.CurrentAccount current) { this.repository = repository; this.current = current; }
     @Transactional
     public ResumeProfile save(String filename, List<ResumeSkill> skills) {
-        return repository.save(new ResumeEntity(filename, skills)).view();
+        var entity = new ResumeEntity(filename, skills); entity.setOwnerId(current.id());
+        return repository.save(entity).view();
     }
     @Transactional(readOnly = true)
     public ResumeProfile get(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new InterviewNotFoundException("Resume")).view();
+        return repository.findByIdAndOwnerId(id, current.id()).orElseThrow(() -> new InterviewNotFoundException("Resume")).view();
     }
 }

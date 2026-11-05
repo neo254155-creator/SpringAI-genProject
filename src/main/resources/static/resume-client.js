@@ -1,5 +1,5 @@
-import { requestJson, readJsonResponse } from "./interview-client.js";
-import { apiUrl } from "./ui/api-config.js";
+import { appFetch } from "./ui/auth-client.js";
+import { requestJson } from "./interview-client.js";
 export function validateProfile(profile) {
   if (
     !profile?.id ||
@@ -20,7 +20,7 @@ export function validateProfile(profile) {
   return profile;
 }
 export class ResumeClient {
-  constructor(fetcher = globalThis.fetch) {
+  constructor(fetcher = appFetch) {
     this.fetcher = fetcher;
   }
   async paste(text, signal) {
@@ -34,6 +34,7 @@ export class ResumeClient {
         body: { text },
         signal,
         fetcher: this.fetcher,
+        validate: validateProfile,
       }),
     );
   }
@@ -49,17 +50,8 @@ export class ResumeClient {
       );
     const form = new FormData();
     form.append("file", file);
-    const fetcher = this.fetcher;
-    return validateProfile(
-      await readJsonResponse(
-        await fetcher(apiUrl("/resumes"), {
-          method: "POST",
-          body: form,
-          signal,
-          headers: { Accept: "application/json" },
-        }),
-      ),
-    );
+    return requestJson("/resumes", { method: "POST", body: form, signal,
+      fetcher: this.fetcher, validate: validateProfile });
   }
   async get(id, signal) {
     return validateProfile(

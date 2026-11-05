@@ -32,12 +32,14 @@ import com.first.genProject.exception.*;
 import com.first.genProject.service.*;
 import com.first.genProject.support.StubChatModel;
 
+@org.springframework.security.test.context.support.WithMockUser(username = com.first.genProject.support.AccountTestConfiguration.ID)
+@Import({com.first.genProject.support.AccountTestConfiguration.class, InterviewPersistenceContract.OfflineAiConfiguration.class})
 @SpringBootTest(properties = {
         "spring.ai.openai.api-key=offline-test-key",
         "spring.ai.openai.chat.model=offline-test-model"
 })
 @AutoConfigureMockMvc
-@Import(InterviewPersistenceContract.OfflineAiConfiguration.class)
+
 abstract class InterviewPersistenceContract {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;

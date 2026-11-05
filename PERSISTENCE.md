@@ -182,3 +182,74 @@ selects only PostgreSQL tests; `live-groq` still selects only the Groq smoke tes
 H2 tests are useful for JPA mappings, application transactions, and queries, but
 are not proof that the PostgreSQL container test passed. See `implementation.md`
 for commands actually run and their results.
+
+## Safe retries
+
+V6 adds `request_replays`. The browser sends a UUID `Idempotency-Key` with POSTs
+for résumé upload/paste, session creation, questions, answers, completion, and
+study-note upload/index/search/answers. API callers can send the same header;
+calls without it retain the original behavior.
+
+The same key and request replay the stored status, JSON and Location without
+rerunning the action. Changed input or a running/unconfirmed outcome returns
+409. Multipart fingerprints use file content and fields rather than the random
+boundary. Known validation/provider failures replay their error; after receiving
+that failure, an explicit browser retry uses a new key. Network loss retains the
+key. Unknown outcomes stay blocked, including after a crash; they require checking
+saved progress rather than automatically taking over the request.
+
+Browser pending keys and input hashes survive tab reloads when session storage
+is available, with an in-memory fallback. Raw files, résumé text and answers are
+not put in retry storage. Successful response validation releases the browser key
+so a later deliberate attempt can be new. A saved-session GET can reconcile a
+completed question key without starting AI. Web Crypto requires HTTPS or localhost.
+
+Database records contain request/key hashes and bounded response copies, which
+can include saved answers, skill excerpts and generated note answers. They are
+retained without automatic expiry; future retention cleanup must preserve the
+protection for unresolved requests. These rows share the current application
+workspace. Database claims are short autocommit operations; AI runs outside them.
+The OpenAI/Groq SDK's hidden retries are disabled with `max-retries=0` settings.
+
+## Accounts and ownership
+
+Start the updated server, open `http://localhost:8080/login.html`, and create your
+first account directly from the server's localhost address. As requested, that
+account receives the existing unowned résumés, sessions/history/progress and notes
+once. V7 adds accounts and owner columns; the transfer happens atomically during
+first registration, not during migration. Remote/forwarded first registrations
+are rejected. Later accounts start empty and cannot claim old rows.
+
+Usernames are case-insensitive, 3–40 ASCII letters/digits/dots/underscores/hyphens;
+passwords require 12 characters and at most 72 UTF-8 bytes and use BCrypt hashes.
+No new API key or external authentication provider is required.
+
+| API | Behavior |
+| --- | --- |
+| `GET /auth/csrf` | Public session CSRF token and header name. |
+| `POST /auth/register` | Create an account; does not itself sign in. |
+| `POST /auth/login` | Sign in and rotate the session ID/CSRF token. |
+| `GET /auth/me` | Current account ID and username. |
+| `POST /auth/logout` | Invalidate the session and delete its cookie. |
+
+The browser registers then signs in, uses an HttpOnly/SameSite=Lax session cookie,
+and sends a CSRF header with mutations and the billable legacy GET/HEAD `/chat`.
+API clients must keep the cookie, fetch `/auth/csrf`, send its named header, and
+fetch a fresh token after login/logout. Account sign-in and registration share a
+per-IP limit of 30 attempts per five minutes, held in bounded per-process memory.
+
+Lists/progress and all ID-based reads/writes enforce the owner, before AI calls.
+Foreign resource IDs return 404. Retry results are scoped by the authenticated
+account ID; anonymous shared-key results are not replayed after this upgrade.
+The main résumé journey follows sign-in without other workflow changes.
+
+Sessions expire after 30 minutes idle and are memory-local, so restarts require
+sign-in again. Use HTTPS and secure session-cookie configuration for deployment;
+multiple instances require shared session/rate-limit storage. The frontend uses
+the same origin as its API; cross-origin credentialed CORS is not configured.
+Password reset, MFA, and self-service account deletion/export remain future work.
+V7 and bootstrap/ownership tests passed on H2; no live Neon account transfer ran.
+
+Session persistence and CSRF handling follow Spring Security's
+[session guidance](https://docs.spring.io/spring-security/reference/servlet/authentication/session-management.html)
+and [CSRF guidance](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html).

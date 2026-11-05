@@ -9,6 +9,7 @@ assets. No React, frontend build, CDN assets, or runtime npm dependencies were a
 | URL | Behavior |
 | --- | --- |
 | `/` | Landing page with clearly labeled demonstration data and conceptual readiness/time metrics. |
+| `/login.html` | Username/password registration and sign-in, with safe return links. |
 | `/dashboard.html` | Actual saved totals, recent-answer chart, topic averages, recent sessions, and score-based suggestions. |
 | `/practice.html` | Existing saved interview workflow with new styling, stage indicators, local visit timer, and end confirmation. |
 | `/history.html` | Paginated sessions/questions/answer attempts and complete saved feedback. |
@@ -16,8 +17,8 @@ assets. No React, frontend build, CDN assets, or runtime npm dependencies were a
 | `/analytics.html` | Actual topic averages, recent score changes, bounded weekly session starts, and recent completion history. |
 | `/recommendations.html` | Topic priorities calculated from actual saved averages; AI recommendation tools remain planned. |
 | `/questions.html` | Clearly marked question-bank placeholder linking to real saved questions in history. |
-| `/settings.html` | Browser-local motion preference; account/profile controls marked planned. |
-| `/privacy.html` | Explains shared storage, provider data flow, local preference, and missing account/deletion controls. |
+| `/settings.html` | Browser-local motion preference and signed-in account status. |
+| `/privacy.html` | Explains account ownership, stored retry results, provider data flow, and remaining deletion/reset limits. |
 
 Old `/?session=ID` links redirect to `/practice.html?session=ID` and preserve the
 existing read-only resume operation. Starting another interview clears the saved
@@ -44,13 +45,10 @@ session URL. A topic/level link can preselect supported values from the options 
 
 ## Backend URL
 
-Same-origin requests are the default. To use a different public API origin, set
-`FRONTEND_API_BASE_URL` in the environment launching Spring Boot, for example
-`https://api.example.com`, then restart. The browser loads this public setting from
-`/frontend-config`. Do not place keys/passwords in this variable. Credential-bearing
-URLs, non-HTTP(S) protocols, query strings, and fragments are rejected by the client.
-A separate origin requires suitable CORS/proxy configuration on that API; no broad
-CORS policy or authentication mechanism was silently added.
+Use the same origin for account pages and APIs; leave `FRONTEND_API_BASE_URL` empty
+for the normal Spring Boot setup. A same-origin proxy can also be used. The public
+setting comes from `/frontend-config` and must contain no keys/passwords. Account
+requests reject other origins; credentialed cross-origin CORS is not configured.
 
 ## Data boundaries
 
@@ -60,18 +58,18 @@ CORS policy or authentication mechanism was silently added.
 - Weekly activity counts session starts within those recent sessions, not all-time
   activity or active study duration. Completed-session elapsed time includes breaks.
 - Topic averages are weighted by attempts and are not mastery/readiness scores.
-- Only Core Java and Spring Boot are currently assessed as topics. Other requested
-  skill areas are labeled not assessed; behavioral/HR/role interviews remain planned.
+- Résumé interviews use confirmed extracted skills. The legacy manual-selection
+  API offers Core Java and Spring Boot; behavioral/HR/role interviews remain planned.
 - Practice shows the real correctness/completeness/clarity rubric. Separate relevance,
   structure scores, improved example answers, and follow-up lists remain planned.
 - Recommendations use a transparent lowest-average rule; no AI recommendation API exists.
-- No login/profile API or ownership enforcement exists. Routes are a shared workspace,
-  not falsely protected account pages. Authentication remains a separate backend task.
+- Sign-in, sign-out and registration use session cookies/CSRF. Stored resources and
+  progress are scoped to the signed-in account; the first local account gets legacy data once.
 - Study Notes is separate from the main resume-based interview journey. Listing/uploading makes no AI calls; indexing and new questions require explicit clicks. No automatic provider retries run. Per-visit cache clears on refresh.
 - The timer is local to the page visit; answer counts and workflow stages do not imply
   a fixed interview length. Unsubmitted drafts are not persisted.
 - Stop waiting aborts the browser request; the server can still finish/save. Retrying
-  an uncertain request can create another attempt because idempotency is not implemented.
+  an uncertain request reuses its key; running/unknown outcomes remain blocked until reviewed.
 
 ## Motion and accessibility
 
@@ -105,3 +103,12 @@ stateful HTTP fixtures, including saved history/progress, refresh, explicit retr
 quota errors, and mobile layouts. It uses the same optional Playwright setup and
 environment overrides as the document check. For separate API/JPA/H2 verification,
 run `./mvnw -Dtest=InterviewPersistenceTest test`; the AI model is stubbed.
+
+`ui/retry-keys.js` and `retry-keys.test.mjs` cover pending request keys across
+transport failures/reloads. `requestJson` handles JSON and multipart POSTs with
+safe retries; see PERSISTENCE.md for the server contract. Run
+`node --test frontend/retry-keys.test.mjs` without provider calls.
+
+`ui/auth-client.js` handles session/CSRF requests; `auth.js`/`auth.css` power the
+login screen. `auth-client.test.mjs` covers CSRF, safe redirects and cookie options.
+Browser fixtures cover sign-in, registration and sign-out alongside résumé practice.

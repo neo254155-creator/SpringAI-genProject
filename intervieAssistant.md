@@ -4,8 +4,8 @@ Source review date: 2026-10-26.
 
 This project is a Java interview learning coach built with Java 21, Spring Boot,
 Spring AI, Spring Data JPA, PostgreSQL, and a static JavaScript frontend.
-Its main journey is: select a topic → receive a question → submit an answer →
-read scored feedback → practise a weakness → review saved progress.
+Its main journey is: upload résumé → confirm skills → choose difficulty → answer
+questions → receive scored feedback → practise weaknesses → review saved progress.
 
 **Status meanings:** implemented means present in the source code. It does not
 mean verified against live services or a deployed application. Planned means
@@ -87,11 +87,11 @@ See [frontend/README.md](frontend/README.md) for module details and
 | Dashboard /dashboard.html | Actual session totals, aggregate scores, topic averages, latest saved answer scores, and real recent sessions. |
 | Analytics /analytics.html | Keyboard-accessible score chart/table, weighted skill averages, strongest/weakest topics, recent weekly starts, and completion history. Charts/activity use at most ten recent sessions and disclose that scope. |
 | Recommendations /recommendations.html | Ranks actual topic/difficulty averages and links to preselected practice. These are score-based suggestions; AI-generated recommendations remain planned. |
-| Shared sidebar | Desktop collapse, mobile menu with Escape/focus containment, active navigation, and explicit shared-workspace status. No authentication or protected account routes are claimed. |
+| Shared sidebar | Desktop collapse, mobile navigation, signed-in account status and sign-out; workspace routes require an account. |
 | Motion | Particle globe, hover tilt on fine pointers, reveal/counter effects, chart/progress animation, press states, and loading skeletons. Reduced-motion/device preference is respected. Browser smoothness remains unverified. |
 | Settings /settings.html | Saves a local motion preference; marks account/profile functionality planned. |
 | Question bank /questions.html | Marks the dedicated bank planned and links to real saved question history. |
-| Privacy /privacy.html | Explains shared data, provider requests, browser preference, and missing user/deletion controls. |
+| Privacy /privacy.html | Explains private account ownership, retry storage, provider requests, browser preference, and remaining deletion/reset limits. |
 | Public API configuration | GET /frontend-config returns only the API base URL, configured by FRONTEND_API_BASE_URL; defaults to same-origin. |
 | End confirmation | Native dialog confirms completion and explains that unsubmitted text is not saved. |
 | Visit timer/stages | Local page-visit elapsed time, answered count, and selection/answer/feedback stages; no invented fixed interview length or saved active-time metric. |
@@ -112,8 +112,8 @@ See [frontend/README.md](frontend/README.md) for module details and
 | Safe output rendering | Inserts model/server strings as text rather than interpreting them as HTML. |
 | Navigation and accessibility basics | Links practice and history, labels inputs, provides status messaging, and moves focus to relevant content. Full accessibility/browser evaluation is not complete. |
 
-Unsubmitted drafts are not saved. An uncertain network result followed by retry
-can create another saved attempt or question; backend idempotency keys are absent.
+Unsubmitted drafts are not saved. The browser uses durable idempotency keys to
+protect retries; uncertain outcomes remain blocked until reconciled.
 
 Evidence: static/index.html, coach.js, interview-client.js, and frontend/README.md.
 
@@ -135,8 +135,7 @@ Evidence: static/index.html, coach.js, interview-client.js, and frontend/README.
 
 Progress includes all saved attempts and is not a verified mastery percentage.
 Resume restores the latest question rather than every older unanswered question.
-There is no login, user table, ownership, or per-user separation: data is shared
-across the current single-learner application.
+Username/password accounts, session sign-in, CSRF, and per-user ownership are implemented. The first local account receives old unowned records once; later accounts start empty. See PERSISTENCE.md.
 
 Evidence: history.html, history.js, history-client.js, SessionResumeResponse,
 InterviewHistoryStore, InterviewFeedbackRepository, and PERSISTENCE.md.
@@ -183,7 +182,7 @@ and [DOCUMENTS.md](DOCUMENTS.md).
 | PostgreSQL + JPA | Entities/repositories map sessions, questions, answers, feedback, feedback-point lists, documents, passages, and document indexes to database storage. |
 | Local InterviewData setup | Supplies a PowerShell script and Java helper to create/configure the requested local database and run migrations. The user's report of running it is not independent verification here. |
 | Local connection settings | Setup can save ignored .local/database.properties; runtime configuration supports database URL/username/password settings. Properties do not create environment variables. No secret values are recorded here. |
-| Flyway migrations | V1 creates interview history; V2 document/passages tables; V3 document indexes; V4 question-focus columns. Flyway applies pending schema changes and tracks migration history; JPA maps data and validates schema. |
+| Flyway migrations | V1 history; V2 passages; V3 indexes; V4 focus; V5 résumés; V6 retry protection; V7 accounts/ownership. Flyway tracks schema versions; JPA validates them. |
 | Database constraints | Foreign keys, uniqueness, score constraints, and indexes protect relationships and stored score structure. |
 | Consistent timestamps | Uses UTC instants with microsecond precision for stored interview timestamps. |
 | Atomic answer/feedback save | A valid evaluation is saved as an answer plus feedback in one transaction. Provider/validation failure saves neither; database failure rolls back both. |
@@ -242,7 +241,7 @@ features as missing.
 | --- | --- | --- |
 | 1. Foundation | User input, controller contracts, offline/live test separation, safe errors. | Verify actual database/chat connections in the runtime environment; configure and verify the selected embedding service before document-search use. |
 | 2. Complete interview flow | Selection → question → answer → rubric feedback → weakness-based next question. | Verify the flow in a real browser against actual services and evaluate generated questions/feedback. |
-| 3. PostgreSQL persistence | Sessions, questions, answers, feedback, and progress use JPA/Flyway. | Independently verify actual PostgreSQL schema/migrations and integration behavior. Add the originally requested users layer, authentication, ownership, and per-user data separation. |
+| 3. PostgreSQL persistence | Sessions, questions, answers, feedback, and progress use JPA/Flyway. | Accounts and ownership now exist; verify V6/V7 rollout on PostgreSQL and evaluate deployment session storage. |
 | 4. Document search with citations | Upload, splitting, Gemini embedding adapter, JSON vector storage, retrieval, and generated answers with checked citation IDs. | Evaluate live retrieval/answer quality and whether cited text supports claims. pgvector is an optional storage/search upgrade for larger collections. |
 | 5. Frontend and deployment | Resume interview workspace, optional Study Notes upload/index/cited-answer UI, Compose, and application Dockerfile exist. | Verify the complete live workflows; build/run the image and complete a verified deployment with reachable services. |
 | 6. Quality evaluation | Structural validation and deterministic offline tests exist. | Use a fixed set of answers to measure scoring consistency and explanation quality; evaluate weakness-targeted questions, real retrieval relevance, and whether cited passages support generated claims. |
@@ -258,12 +257,12 @@ Additional requested features still unfinished:
 
 Known gaps and optional improvements, not automatically additional committed tasks:
 
-- Backend idempotency keys to avoid duplicate writes after uncertain retries.
+- Retry-response retention cleanup and recovery of unresolved requests after crashes.
 - Draft autosave; broader resume of older unanswered questions.
 - Weakness analysis across sessions, automatic difficulty changes, and detection
   of paraphrased duplicate questions.
 - PDF/Word extraction, overlapping/token-aware passages, and library-wide search.
-- Optional Neon migration if selected; no switch or data migration has been done.
+- pgvector for larger collections; current storage uses regular PostgreSQL JSON vectors.
 
 ## 9. Intended document-answer pipeline
 
@@ -299,17 +298,11 @@ This catalogue was checked against controller mappings, service logic, DTOs,
 entities/repositories, prompt resources, migrations, frontend clients/screens,
 scripts, and the current guides. No credentials are included.
 
-Frontend milestone checks: 126 backend tests and 21 JavaScript tests passed
-using stubs/H2/mocked requests; Maven packaging succeeded. The optional browser
-check could not run here because Playwright is unavailable and local server
-sockets are blocked. No visual, animation, screenshot, or live-service pass is claimed.
-
-The last connection check in this environment verified 0/3 services: network/socket
-restrictions blocked PostgreSQL/Groq, and embeddings were disabled. Groq key
-validity remains unknown; zero dashboard calls does not establish an invalid key.
-Actual PostgreSQL contents, live model/embedding behavior, browser visuals, Docker
-execution, and deployment remain unverified here. The user reported running local
-database setup, but that report is not an independent database inspection.
+Latest offline checks: 173 backend tests, 56 client tests, and résumé/account/document
+browser fixtures passed. V1–V7 passed on H2; V6/V7 still need Neon rollout verification.
+The earlier live résumé smoke passed Groq and Neon with three Groq calls; a Gemini
+direct API check also passed. These do not establish scoring consistency, citation
+support, restart recovery, or a deployed application. See the dated verification guides.
 
 Source guides: [README.md](README.md), [PROJECT_REVIEW.md](PROJECT_REVIEW.md),
 [implementation.md](implementation.md), [PERSISTENCE.md](PERSISTENCE.md),

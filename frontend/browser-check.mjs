@@ -117,7 +117,7 @@ try {
     totalPages: items.length ? 1 : 0,
   });
   await context.route(
-    /\/(interview\/|resumes(?:\/|$)|frontend-config)/,
+    /\/(interview\/|resumes(?:\/|$)|auth\/|frontend-config)/,
     async (route) => {
       const req = route.request(),
         url = new URL(req.url()),
@@ -130,6 +130,8 @@ try {
         });
       let data;
       if (p === "/frontend-config") data = { apiBaseUrl: "" };
+      else if (p === "/auth/me") data = { id: "fixture-user", username: "learner" };
+      else if (p === "/auth/csrf") data = { headerName: "X-CSRF-TOKEN", token: "fixture-csrf" };
       else if (p === "/resumes/text" || p === "/resumes/r1") data = profile;
       else if (p === "/resumes/r1/sessions") {
         const selection = req.postDataJSON();

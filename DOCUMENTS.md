@@ -38,8 +38,7 @@ reaching application validation.
 
 Upload and read endpoints require database connectivity but make no AI calls. The app's
 existing Groq configuration is still required for normal application startup.
-Storage follows the existing single-learner model: documents are shared across
-the application and have no per-user ownership or authentication.
+Documents belong to the signed-in account. Upload/list/read/index/search/answer routes enforce ownership; see PERSISTENCE.md for session/CSRF setup.
 
 ## Configure hosted embeddings
 
@@ -183,5 +182,6 @@ Previously indexed documents can be queried directly without indexing again.
 The screen shows insufficient-evidence responses and expandable saved source
 excerpts as text, handles pagination/errors/cancellation, and preserves input on
 failed answers. Cancelling stops waiting; the server can still consume quota.
-Generated answers are not saved after a page refresh. Source identity checks do
-not establish that all generated claims are supported.
+The screen clears generated answers on refresh. Keyed response copies are kept
+in the server's retry ledger; see PERSISTENCE.md. Source identity checks do not
+establish that all generated claims are supported.

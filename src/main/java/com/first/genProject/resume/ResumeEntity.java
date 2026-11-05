@@ -10,6 +10,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Entity
 @Table(name = "resume_profiles")
 public class ResumeEntity {
+    @Column(name = "owner_id") private UUID ownerId;
+    public UUID getOwnerId() { return ownerId; }
+    public void setOwnerId(UUID id) { ownerId = id; }
     @Id @GeneratedValue(strategy = GenerationType.UUID) private UUID id;
     @Column(nullable = false, length = 255) private String filename;
     @Column(name = "skills_json", nullable = false, columnDefinition = "TEXT") private String skillsJson;

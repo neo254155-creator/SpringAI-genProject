@@ -1,8 +1,9 @@
+import { appFetch } from "./ui/auth-client.js";
 import { requestJson } from './interview-client.js';
 
 const segment = id => encodeURIComponent(id);
 export class HistoryClient {
-  constructor(fetcher = globalThis.fetch) { this.fetcher = fetcher; }
+  constructor(fetcher = appFetch) { this.fetcher = fetcher; }
   async #read(path, signal) { return requestJson(path, { signal, fetcher: this.fetcher }); }
   async #page(path, page, signal) {
     if (!Number.isInteger(page) || page < 0) throw new Error('Invalid page number.');

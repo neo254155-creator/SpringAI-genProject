@@ -24,8 +24,13 @@ let mode = "normal", hasUpload = false, browser, activePage, resumeUploads = 0;
 const mime = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml" };
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
-  const json = (value, status = 200) => { res.writeHead(status, { "Content-Type": "application/json" }).end(JSON.stringify(value)); };
+  const json = (value, status = 200) => { res.writeHead(status, { "Content-Type": "application/json",
+    ...(req.method === "POST" ? { "Idempotency-Status": status < 400 ? "completed" : "failed" } : {}) }).end(JSON.stringify(value)); };
   try {
+    if (req.method === "POST") assert.match(req.headers["idempotency-key"] || "", /^[0-9a-f-]{36}$/i);
+    if (url.pathname === "/auth/csrf") return json({ headerName: "X-CSRF-TOKEN", token: "fixture-csrf" });
+    if (url.pathname === "/auth/me") return json({ id: "fixture-user", username: "learner" });
+    if (req.method === "POST") assert.equal(req.headers["x-csrf-token"], "fixture-csrf");
     if (url.pathname === "/frontend-config") return json({ apiBaseUrl: "" });
     if (url.pathname === "/resumes" && req.method === "POST") {
       for await (const chunk of req) { /* Consume synthetic resume input only. */ }

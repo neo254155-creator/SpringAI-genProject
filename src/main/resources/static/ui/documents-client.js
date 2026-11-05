@@ -1,5 +1,5 @@
-import { requestJson, readJsonResponse } from "../interview-client.js";
-import { apiUrl } from "./api-config.js";
+import { appFetch } from "./auth-client.js";
+import { requestJson } from "../interview-client.js";
 
 const segment = (id) => {
   if (typeof id !== "string" || !id || id.length > 200) throw new Error("Choose a saved document.");
@@ -19,7 +19,7 @@ export function validateUpload(title, file) {
 }
 
 export class DocumentsClient {
-  constructor(fetcher = globalThis.fetch) { this.fetcher = fetcher; }
+  constructor(fetcher = appFetch) { this.fetcher = fetcher; }
   async list(page = 0, signal) {
     if (!Number.isSafeInteger(page) || page < 0) throw new Error("Invalid page number.");
     const result = await requestJson(`/documents?page=${page}&size=10`, { signal, fetcher: this.fetcher });
@@ -39,39 +39,40 @@ export class DocumentsClient {
     const body = new FormData();
     body.append("title", title);
     body.append("file", file);
-    const fetcher = this.fetcher;
-    const result = await readJsonResponse(await fetcher(apiUrl("/documents"), {
-      method: "POST", headers: { Accept: "application/json" }, body, signal,
-    }));
-    if (!validDocument(result)) throw new Error("The server did not return a saved document.");
-    return result;
+    return requestJson("/documents", { method: "POST", body, signal, fetcher: this.fetcher,
+      validate: result => {
+        if (!validDocument(result)) throw new Error("The server did not return a saved document.");
+        return result;
+      } });
   }
   async index(id, signal) {
-    const result = await requestJson(`/documents/${segment(id)}/index`, {
+    return requestJson(`/documents/${segment(id)}/index`, {
       method: "POST", signal, fetcher: this.fetcher,
-    });
-    if (result?.documentId !== id || !hasText(result.model) || !Number.isInteger(result.dimensions)
+      validate: result => {
+        if (result?.documentId !== id || !hasText(result.model) || !Number.isInteger(result.dimensions)
         || result.dimensions < 1 || result.dimensions > 8192 || !Number.isInteger(result.passageCount)
         || result.passageCount < 1)
-      throw new Error("The server did not confirm the document index.");
-    return result;
+          throw new Error("The server did not confirm the document index.");
+        return result;
+      } });
   }
   async answer(id, query, signal) {
     if (typeof query !== "string" || !query.trim() || query.trim().length > 2000 || query.includes("\0"))
       throw new Error("Enter a question between 1 and 2,000 characters.");
     query = query.trim();
-    const result = await requestJson(`/documents/${segment(id)}/answer`, {
+    return requestJson(`/documents/${segment(id)}/answer`, {
       method: "POST", body: { query, limit: 5 }, signal, fetcher: this.fetcher,
-    });
-    const sources = result?.sources;
-    if (result?.documentId !== id || result.query !== query || !hasText(result.answer)
+      validate: result => {
+        const sources = result?.sources;
+        if (result?.documentId !== id || result.query !== query || !hasText(result.answer)
         || typeof result.insufficientEvidence !== "boolean" || !Array.isArray(sources) || sources.length > 5
         || !sources.every((s) => hasText(s.passageId) && Number.isInteger(s.number) && s.number > 0
           && hasText(s.text) && Number.isFinite(s.similarity) && s.similarity >= -1 && s.similarity <= 1)
         || new Set(sources.map((s) => s.passageId)).size !== sources.length
         || (result.insufficientEvidence ? sources.length !== 0 : sources.length === 0))
-      throw new Error("The server returned an invalid cited answer.");
-    return result;
+          throw new Error("The server returned an invalid cited answer.");
+        return result;
+      } });
   }
 }
 

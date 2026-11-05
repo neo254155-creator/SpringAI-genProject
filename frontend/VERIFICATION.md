@@ -1,5 +1,19 @@
 # Frontend verification
 
+## Accounts and ownership — 2026-11-02
+
+- The full default offline backend suite passed: 173 tests, zero failures/errors/skips; live-provider and PostgreSQL-container tags were excluded. The suite covers session fixation/CSRF rotation, logout, foreign resource denial before AI, owner-scoped lists/progress and replay keys, password hashing, local-only first setup, and concurrent one-time legacy transfer.
+- 56 client tests passed. Résumé and document browser fixtures passed with account/CSRF bootstrap; the résumé check also covers wrong-password errors, return links, sign-out, registration and a 320px account screen. Screenshots were inspected.
+- The cookie/CSRF login and multipart retry also passed against the local embedded test server with H2/AI stubs. Browser flows use HTTP fixtures; no live Groq, Gemini or Neon request ran for this task.
+- Migrations V1–V7 passed on H2. Actual Neon rollout/legacy transfer, HTTPS deployment and shared multi-instance session storage are pending. Creating the first real account is a user action after restarting the updated server; no real account/password was created by the agent.
+
+## Retry protection — 2026-11-01
+
+- 49 client tests passed, including key reuse after lost responses, multipart identity, reload recovery, schema validation, and clearing a recovered question key before the next question.
+- 36 focused backend tests passed: 19 interview persistence, 10 replay/SDK, and 7 document-search tests. Concurrent duplicates, durable replay through a fresh filter, safe failure handling, and both embedding/chat replay counters passed. A real local HTTP multipart retry used different boundaries and extracted once.
+- The configured SDK made exactly one attempt against a local HTTP 500 fixture. Both résumé and document browser checks passed and require UUID request keys on POSTs. AI models/providers and databases were fixtures/H2 only; no live Groq, Gemini, or Neon calls ran.
+- V6 migrated successfully on H2. The earlier Neon smoke below predates V6; PostgreSQL rollout, crash/restart testing, and retention cleanup remain unverified.
+
 ## Live résumé smoke — 2026-11-01
 
 - The actual local project passed browser upload, grounded skill extraction, confirmation of Python, beginner selection, one question, scored feedback, page reload, completion, saved history, and progress through Groq and Neon. Exactly three outbound Groq requests returned HTTP 200; no Gemini call ran.

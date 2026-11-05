@@ -21,8 +21,9 @@ public interface InterviewFeedbackRepository extends JpaRepository<InterviewFeed
                 s.track, coalesce(q.resumeSkill, s.topic), s.difficulty, count(f), count(distinct q.id),
                 avg(f.score), max(f.score), max(a.submittedAt))
             from InterviewFeedbackEntity f join f.answer a join a.question q join q.session s
+            where s.ownerId = :ownerId
             group by s.track, coalesce(q.resumeSkill, s.topic), s.difficulty
             order by s.track, coalesce(q.resumeSkill, s.topic), s.difficulty
             """)
-    List<TopicProgress> topicProgress();
+    List<TopicProgress> topicProgress(@Param("ownerId") UUID ownerId);
 }

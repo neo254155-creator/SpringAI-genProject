@@ -28,7 +28,7 @@ export class InterviewHistory extends HTMLElement {
         <span class="eyebrow">EVERY ANSWER IS A STEP FORWARD</span>
         <h1>Your practice, over time.</h1>
         <p>Review saved interviews, revisit feedback, and continue an unfinished session.</p>
-        <p class="hint">This project currently uses one shared learner history. Scores reflect saved answer attempts.</p>
+        <p class="hint">This history belongs to your account. Scores reflect your saved answer attempts.</p>
         <section id="progress" aria-labelledby="progress-title">
           <div class="heading"><h2 id="progress-title">Topic progress</h2><button id="refresh-progress" class="secondary">Refresh progress</button></div>
           <p id="progress-status" role="status"></p><div id="progress-body"></div>

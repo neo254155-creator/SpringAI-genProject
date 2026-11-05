@@ -22,10 +22,12 @@ public class StudyDocumentService {
     private static final int PASSAGE_LENGTH = 1200;
     private final StudyDocumentRepository documents;
     private final StudyPassageRepository passages;
+    private final com.first.genProject.auth.CurrentAccount current;
 
-    public StudyDocumentService(StudyDocumentRepository documents, StudyPassageRepository passages) {
+    public StudyDocumentService(StudyDocumentRepository documents, StudyPassageRepository passages, com.first.genProject.auth.CurrentAccount current) {
         this.documents = documents;
         this.passages = passages;
+        this.current = current;
     }
 
     @Transactional
@@ -51,7 +53,8 @@ public class StudyDocumentService {
                 && c != '\n' && c != '\r' && c != '\t')) {
             throw new InvalidInputException("The file must contain readable, nonblank UTF-8 text");
         }
-        var document = documents.save(new StudyDocumentEntity(title.strip(), filename));
+        var entity = new StudyDocumentEntity(title.strip(), filename); entity.setOwnerId(current.id());
+        var document = documents.save(entity);
         int number = 1;
         for (int start = 0; start < text.length();) {
             int end = Math.min(start + PASSAGE_LENGTH, text.length());
@@ -77,7 +80,7 @@ public class StudyDocumentService {
         if (page < 0 || size < 1 || size > 100) {
             throw new InvalidInputException("page must be nonnegative and size must be between 1 and 100");
         }
-        var result = documents.findAll(PageRequest.of(page, size,
+        var result = documents.findByOwnerId(current.id(), PageRequest.of(page, size,
                 Sort.by(Sort.Direction.DESC, "createdAt", "id"))).map(this::view);
         return new PageResponse<>(result.getContent(), page, size, result.getTotalElements(), result.getTotalPages());
     }
@@ -96,7 +99,7 @@ public class StudyDocumentService {
     }
 
     private StudyDocumentEntity load(UUID id) {
-        return documents.findById(id).orElseThrow(() -> new InterviewNotFoundException("Document"));
+        return documents.findByIdAndOwnerId(id, current.id()).orElseThrow(() -> new InterviewNotFoundException("Document"));
     }
 
     private StudyDocumentResponse view(StudyDocumentEntity document) {
