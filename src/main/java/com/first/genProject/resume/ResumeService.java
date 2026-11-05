@@ -54,7 +54,7 @@ public class ResumeService {
             if (name.isBlank() || name.length() > 80 || evidence.isBlank() || evidence.length() > 240
                     || name.chars().anyMatch(Character::isISOControl)
                     || !names.add(normalize(name)) || !normalizedText.contains(normalize(evidence))
-                    || !Pattern.compile("(?<![\\p{L}\\p{N}])" + Pattern.quote(normalize(name)) + "(?![\\p{L}\\p{N}])")
+                    || !Pattern.compile("(?<![\\p{L}\\p{N}+#])" + Pattern.quote(normalize(name)) + "(?![\\p{L}\\p{N}+#])")
                             .matcher(normalize(evidence)).find()) throw new AiProviderException();
             verified.add(new ResumeSkill(name, evidence));
         }

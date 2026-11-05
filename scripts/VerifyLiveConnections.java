@@ -19,11 +19,17 @@ import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.json.JsonMapper;
 import com.first.genProject.config.DocumentEmbeddingConfig;
 
-/** Read-only database checks plus one small request per configured AI provider. */
+/** Read-only database checks; provider calls require explicit --include-ai. */
 class VerifyLiveConnections {
     private final StandardEnvironment settings = new StandardEnvironment();
 
     public static void main(String[] args) {
+        var options = new HashSet<>(List.of(args));
+        if (args.length > 1 || options.stream().anyMatch(option -> !Set.of("--database-only", "--include-ai").contains(option))
+                || options.contains("--database-only") && options.contains("--include-ai")) {
+            System.out.println("Usage: VerifyLiveConnections [--database-only | --include-ai]");
+            System.exit(2);
+        }
         var checks = new VerifyLiveConnections();
         try {
             ConfigDataEnvironmentPostProcessor.applyTo(checks.settings);
@@ -33,10 +39,13 @@ class VerifyLiveConnections {
         }
         int passed = 0;
         if (checks.run("PostgreSQL", checks::database)) passed++;
-        if (checks.run("Groq", checks::groq)) passed++;
-        if (checks.run("Embeddings", checks::embeddings)) passed++;
-        System.out.println("Verified " + passed + "/3 services. Missing or disabled settings are not passes.");
-        System.exit(passed == 3 ? 0 : 1);
+        if (options.contains("--include-ai")) {
+            if (checks.run("Groq", checks::groq)) passed++;
+            if (checks.run("Embeddings", checks::embeddings)) passed++;
+        } else System.out.println("AI checks skipped to preserve quota; --include-ai makes one request per provider.");
+        int expected = options.contains("--include-ai") ? 3 : 1;
+        System.out.println("Verified " + passed + "/" + expected + " selected services. Missing or disabled settings are not passes.");
+        System.exit(passed == expected ? 0 : 1);
     }
 
     private boolean run(String name, Check check) {
@@ -75,7 +84,8 @@ class VerifyLiveConnections {
                 }
                 var required = Set.of("interview_sessions", "interview_questions", "interview_answers", "interview_feedback",
                         "feedback_correct_points", "feedback_missing_points", "study_documents", "study_passages",
-                        "document_search_indexes", "resume_profiles", "flyway_schema_history");
+                        "document_search_indexes", "resume_profiles", "flyway_schema_history", "request_replays",
+                        "app_users", "account_bootstrap", "spring_session", "spring_session_attributes");
                 if (!found.containsAll(required)) throw new SchemaProblem("Expected application tables or Flyway history are missing; no migrations were run.");
                 Set<String> versions = new HashSet<>();
                 try (var rows = statement.executeQuery("SELECT version, success FROM flyway_schema_history")) {
@@ -84,8 +94,8 @@ class VerifyLiveConnections {
                         versions.add(rows.getString(1));
                     }
                 }
-                if (!versions.containsAll(Set.of("1", "2", "3", "4", "5"))) {
-                    throw new SchemaProblem("Expected successful Flyway versions V1 through V5; no migrations were run.");
+                if (!versions.containsAll(Set.of("1", "2", "3", "4", "5", "6", "7", "8"))) {
+                    throw new SchemaProblem("Expected successful Flyway versions V1 through V8; no migrations were run.");
                 }
                 Set<String> columns = new HashSet<>();
                 try (var rows = statement.executeQuery("SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'interview_questions'")) {
@@ -96,14 +106,14 @@ class VerifyLiveConnections {
                 try (var rows = statement.executeQuery("SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'interview_sessions'")) {
                     while (rows.next()) columns.add(rows.getString(1));
                 }
-                if (!columns.containsAll(Set.of("resume_id", "resume_context_json"))) throw new SchemaProblem("V5 resume session columns are missing.");
+                if (!columns.containsAll(Set.of("resume_id", "resume_context_json", "owner_id"))) throw new SchemaProblem("Resume or ownership columns are missing.");
                 // Confirm the configured login can actually read application tables, not just see their names.
                 for (String table : required) {
                     try (var rows = statement.executeQuery("SELECT 1 FROM " + table + " LIMIT 1")) { rows.next(); }
                 }
             } finally { connection.rollback(); }
         }
-        return "JDBC connection, read access, expected tables, V1-V5 history, and practice-focus columns checked without writes.";
+        return "JDBC connection, read access, expected tables, V1-V8 history, and resume/ownership columns checked without writes.";
     }
 
     private String groq() throws Exception {

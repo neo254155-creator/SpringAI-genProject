@@ -13,6 +13,7 @@ Set these in the Vercel project's environment settings before deploying:
 | Variable | Value |
 | --- | --- |
 | `PORT` | `8080` (match the application's listening port) |
+| `SPRING_PROFILES_ACTIVE` | `production` (requires HTTPS; JDBC sessions and Secure cookies) |
 | `DB_URL` | Your hosted PostgreSQL JDBC URL, e.g. `jdbc:postgresql://YOUR_HOST/InterviewData?sslmode=require`; use the actual hosted database name |
 | `DB_USER` | Hosted PostgreSQL username |
 | `DB_PASSWORD` | Hosted PostgreSQL password |
@@ -35,6 +36,25 @@ Deploy through your connected Vercel Git repository or run `vercel deploy`
 from this directory with an authenticated Vercel CLI. These instructions do
 not mean a deployment has been performed or verified.
 
+Publishing is deferred until the UI work is finished. Before publishing, create
+your first account locally against the hosted database and confirm legacy ownership.
+Remote/forwarded first-account setup is deliberately blocked. The production
+profile requires explicit DB settings, uses at most three database connections
+per instance, and shares sign-in/CSRF state using V8's Spring Session JDBC tables.
+Keep the API and frontend on one HTTPS origin. Do not disable Secure cookies online.
+
+Configure a shared platform rate limit for `POST /auth/login` and
+`POST /auth/register` before opening public registration; the in-process limiter
+does not share counters between instances. Verify login/logout, account isolation
+and saved progress on a preview deployment before publishing. Runtime/provider
+limits still need checking on the chosen hosting account.
+
+The application JAR and local/production browser journeys were verified. Docker
+image build/run remains unverified because no Docker CLI/daemon is available here.
+Authenticated database sessions passed the disposable H2 restart check. Neon V8,
+production cookie flags, anonymous CSRF-session restart and logout cleanup also
+passed. Authenticated hosted-session behavior still needs a preview check.
+
 For a local image build with Docker installed:
 
 ```sh
@@ -43,4 +63,4 @@ docker build -f Dockerfile.vercel -t genproject .
 
 Official platform documentation:
 https://vercel.com/kb/guide/does-vercel-support-docker-deployments
-https://vercel.com/blog/dockerfile-on-vercel
+https://docs.spring.io/spring-session/reference/configuration/jdbc.html

@@ -43,6 +43,7 @@ class ResumeTextReaderTest {
     }
     @Test
     void evidenceMustBePresentAndContainWholeSkillName() {
+        assertThrows(AiProviderException.class, () -> ResumeService.verifySkills("C++", List.of(new ResumeSkill("C", "C++"))));
         assertThrows(AiProviderException.class, () -> ResumeService.verifySkills("I use JavaScript", List.of(new ResumeSkill("Java", "I use JavaScript"))));
         assertThrows(AiProviderException.class, () -> ResumeService.verifySkills("I use SQL", List.of(new ResumeSkill("Python", "I use Python"))));
         assertThrows(AiProviderException.class, () -> ResumeService.verifySkills("SQL", List.of(new ResumeSkill("SQL", "SQL"), new ResumeSkill("sql", "SQL"))));

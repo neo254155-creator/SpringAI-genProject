@@ -243,12 +243,16 @@ Foreign resource IDs return 404. Retry results are scoped by the authenticated
 account ID; anonymous shared-key results are not replayed after this upgrade.
 The main résumé journey follows sign-in without other workflow changes.
 
-Sessions expire after 30 minutes idle and are memory-local, so restarts require
-sign-in again. Use HTTPS and secure session-cookie configuration for deployment;
-multiple instances require shared session/rate-limit storage. The frontend uses
+Sessions expire after 30 minutes idle. Local sessions are memory-local; the
+`production` profile uses V8's JDBC session tables and Secure cookies, so instances
+can share login/CSRF state. The profile requires explicit DB settings and HTTPS.
+Shared platform rate limits still need configuring before release. The frontend uses
 the same origin as its API; cross-origin credentialed CORS is not configured.
 Password reset, MFA, and self-service account deletion/export remain future work.
-V7 and bootstrap/ownership tests passed on H2; no live Neon account transfer ran.
+V1–V8 passed on H2 and applied on Neon. Production cookie flags and anonymous
+JDBC/CSRF state survived a Neon-backed restart; authenticated restart passed on H2.
+The user created the first Neon account; a read-only audit confirmed it owns the
+two existing sessions, with no unowned résumés, sessions or notes remaining.
 
 Session persistence and CSRF handling follow Spring Security's
 [session guidance](https://docs.spring.io/spring-security/reference/servlet/authentication/session-management.html)

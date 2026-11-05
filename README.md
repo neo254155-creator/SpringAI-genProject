@@ -5,6 +5,9 @@ OpenAI-compatible API. See [implementation.md](implementation.md) for completed
 milestones and pending work. See [PROJECT_REVIEW.md](PROJECT_REVIEW.md) for the
 current code review and remaining roadmap.
 
+For a short explanation of each file, see [FILE_GUIDE.md](FILE_GUIDE.md).
+Current scope is the résumé-to-progress journey; additional AI features are deferred.
+
 ## Run
 
 Sign-in and private account ownership are implemented. After starting the updated
@@ -17,8 +20,9 @@ The application now requires PostgreSQL. See [PERSISTENCE.md](PERSISTENCE.md) fo
 local `InterviewData` database setup, stored-session APIs, and progress queries.
 The Windows setup script is `scripts/setup-local-postgres.ps1`; it creates the
 database and runs migrations without requiring a Groq key.
-To check the actual database and configured AI providers without database writes,
-run `python3 scripts/verify-live-connections.py`; see [LIVE_VERIFICATION.md](LIVE_VERIFICATION.md).
+To check the actual database without writes or AI calls, run
+`python3 scripts/verify-live-connections.py`. Add `--include-ai` only when you want
+one request per AI provider. See [LIVE_VERIFICATION.md](LIVE_VERIFICATION.md).
 
 Provide `GROQ_API_KEY` in your environment, then run:
 

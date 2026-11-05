@@ -20,23 +20,23 @@ Main flow: upload résumé → confirm extracted skills → choose difficulty �
 - 2026-11-01: live resume smoke passed through Groq and Neon: upload, confirmed skills, difficulty, question, score, reload, history, and progress; exactly 3 Groq calls and no Gemini calls.
 - 2026-11-01: added durable retry protection, reload-safe browser keys, V6, and disabled hidden SDK retries; offline tests passed with no live AI calls.
 - 2026-11-02: added username/password accounts, session/CSRF protection, private ownership, and V7; the first local account receives legacy data once, as requested.
+- 2026-11-05: verified the packaged résumé/account flow and restart recovery; kept the local C/C++ and missing-difficulty fixes. Connection checks now skip AI by default.
+- 2026-11-05: prepared Secure production cookies and JDBC sessions (V8); publishing waits until after UI work. File explanations: [FILE_GUIDE.md](FILE_GUIDE.md).
 
 ## Verification
 
-- Backend: full default offline suite passed (173 tests). V6/V7 passed on H2; live Neon rollout and first-account transfer are pending.
-- Frontend: 56 client tests and document/resume/account fixture browser checks passed, including mobile layouts and saved progress.
+- Backend: 173 offline tests passed; JAR packaging and Neon V6–V8/cookie/CSRF checks passed. The first account owns the two existing sessions; no unowned résumés, sessions or notes remain.
+- Frontend: 56 client tests passed. Real browser → packaged app → file database checks passed in local and production profiles, including restart and quota recovery.
 - Live resume smoke passed with Groq and Neon; Gemini's earlier direct API check passed.
-- Weakness practice passed offline; live follow-up quality, citation support, and database restart recovery still need evaluation.
+- Weakness practice and file-database restart recovery passed offline; live scoring/citation quality is not established by fixture tests. No live AI calls ran for this update.
 
 ## Next
 
-1. Verify V6/V7 on Neon; create the first local account and confirm its existing records.
-2. Add bounded interview memory, then controlled AI tools for scores and study tasks.
-3. Connect study-note explanations to interview feedback.
-4. Evaluate scoring, follow-ups, retrieval/citations, and restart recovery with a small live-call budget.
-5. Build/test the container, deploy with HTTPS and suitable session storage, and finish the file guide.
+1. Enhance the UI while preserving the agreed résumé-to-progress flow.
+2. After UI work: build/run the container, configure platform rate limits, verify the hosted preview, then publish.
+Extra memory, AI tools, study-task management and note integration are deferred.
 
 ## Working agreement
 
 Keep task notes brief. Commit and push after every two completed tasks.
-At project completion, add a file guide here: one short, simple explanation of what each project source, test, configuration, and documentation file does.
+Keep [FILE_GUIDE.md](FILE_GUIDE.md) current as files change; this log stays brief.

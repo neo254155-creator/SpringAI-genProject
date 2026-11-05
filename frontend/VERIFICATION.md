@@ -1,5 +1,13 @@
 # Frontend verification
 
+## Essential flow — 2026-11-05
+
+- 173 default offline backend tests and 56 client tests passed. The executable JAR packaged successfully; a running-JAR file lock required building the verification artifact in a separate folder.
+- `core-flow-check.mjs` passed against the real packaged app and a disposable file-backed H2 database: registration/login, résumé upload, confirmed skills, difficulty, rubric feedback, weakness practice, history/dashboard, cross-account denial and process restart. The AI HTTP endpoint is a local fixture; six fixture requests, zero live provider calls per run.
+- Both local servlet sessions and production JDBC sessions passed. Production login survived restart; local login expired and saved progress survived re-login. Secure cookies are disabled only in this disposable HTTP fixture; actual production configuration enables them.
+- Neon V6–V8 migrated successfully. A production check verified Secure/HttpOnly/SameSite cookies, anonymous CSRF state across restart and logout cleanup; authenticated restart passed on H2. The user created the first real account: a read-only audit confirmed it owns the two existing sessions, with no unowned résumés/sessions/notes. Docker is unavailable; publishing waits until after UI work.
+- The Java database-only connection helper passed against Neon and explicitly skipped AI. The Python launcher was reviewed but could not run because Python is not installed here.
+
 ## Accounts and ownership — 2026-11-02
 
 - The full default offline backend suite passed: 173 tests, zero failures/errors/skips; live-provider and PostgreSQL-container tags were excluded. The suite covers session fixation/CSRF rotation, logout, foreign resource denial before AI, owner-scoped lists/progress and replay keys, password hashing, local-only first setup, and concurrent one-time legacy transfer.

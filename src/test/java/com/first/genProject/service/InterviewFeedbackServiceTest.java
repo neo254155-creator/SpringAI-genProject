@@ -69,6 +69,7 @@ class InterviewFeedbackServiceTest {
 
     @Test
     void rejectsInvalidDirectInputBeforeModelCall() {
+        assertThrows(InvalidInputException.class, () -> service.evaluateResumeAnswer("Python", null, "What is yield?", "It returns values lazily."));
         assertThrows(InvalidInputException.class, () -> service.evaluateAnswer(null));
         assertThrows(InvalidInputException.class, () -> service.evaluateAnswer(
                 new InterviewAnswerRequest("Java", "Spring Boot", "intermediate", " ", "answer")));

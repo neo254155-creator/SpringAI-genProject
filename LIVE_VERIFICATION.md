@@ -1,5 +1,14 @@
 # Verify real database and AI connections
 
+## Essential checks — 2026-11-05
+
+Neon applied V6–V8. Production Secure/HttpOnly/SameSite cookies, persisted anonymous
+CSRF state across restart and logout cleanup passed. The packaged résumé/account
+flow and authenticated restart passed with a file-backed H2 database and local AI
+fixture. No live AI request ran. After the user's registration, a read-only audit
+confirmed first-account ownership of both existing sessions and no unowned
+résumés/sessions/notes. Container verification/publishing waits until after UI work.
+
 ## Latest live résumé smoke — 2026-11-01
 
 The actual project passed browser résumé upload → confirmed skills → beginner
@@ -28,13 +37,14 @@ Application command-line arguments are not forwarded by this launcher.
 
 | Check | What it verifies |
 | --- | --- |
-| PostgreSQL | Real JDBC connection, read access to the nine application tables and Flyway history, successful V1–V4 history entries, and V4 focus columns. |
-| Groq | One small chat request using the configured provider URL, key, and model; requires a nonempty returned message. |
-| Embeddings | One short text sent through the configured hosted Gemini adapter; requires a validated numerical vector. |
+| PostgreSQL (default) | JDBC read access, expected tables, successful V1–V8 history and resume/ownership columns. |
+| Groq (`--include-ai`) | One small chat request; requires a nonempty message. |
+| Embeddings (`--include-ai`) | One short text through the Gemini adapter; requires a validated vector. |
 
 The database connection is read-only; the helper uses SELECT statements and
 rolls back. It does not create a database, run migrations, insert records, or
-change credentials. AI checks use real provider requests and may consume credits.
+change credentials. AI checks are skipped unless you explicitly add `--include-ai`;
+that option uses one real request per configured provider and may consume credits.
 Keys, passwords, URLs, provider response text, and raw exception messages are not
 printed. No JSON report containing credentials is written.
 
@@ -48,7 +58,7 @@ property values; restore the references or supply Spring property overrides.
 See DOCUMENTS.md for settings. Do not paste keys into chat or commit them.
 
 Output is `PASS`, `FAIL`, or `NOT_CONFIGURED` per service, followed by a verified
-count. Exit code 0 requires all three services to pass; code 1 means at least one
+count. Exit code 0 requires all selected services to pass; code 1 means at least one
 remains unverified. Disabled embeddings do not count as a pass. Checks continue
 after one service fails, so the other services can still be reported.
 

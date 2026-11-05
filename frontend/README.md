@@ -112,3 +112,11 @@ safe retries; see PERSISTENCE.md for the server contract. Run
 `ui/auth-client.js` handles session/CSRF requests; `auth.js`/`auth.css` power the
 login screen. `auth-client.test.mjs` covers CSRF, safe redirects and cookie options.
 Browser fixtures cover sign-in, registration and sign-out alongside résumé practice.
+
+`core-flow-check.mjs` drives a real packaged Spring Boot app through the browser,
+using a disposable file-backed H2 database and local AI HTTP fixture. It checks the
+main journey, quota recovery, account isolation and process restart. Build first;
+set `H2_JAR` to the cached test driver and run `node frontend/core-flow-check.mjs`.
+Use `CORE_PROFILE=production` to check JDBC session survival; Secure cookies are
+disabled only in this disposable HTTP fixture. Optional overrides: `APP_JAR`,
+`JAVA_EXECUTABLE`, `PLAYWRIGHT_MODULE`, `BROWSER_EXECUTABLE`. No live providers run.
