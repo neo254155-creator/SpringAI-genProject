@@ -66,7 +66,7 @@ async function start() {
   app = spawn(process.env.JAVA_EXECUTABLE || "java", [
     `-Dloader.path=${h2}`, "-cp", jar, "org.springframework.boot.loader.launch.PropertiesLauncher",
     "--server.address=127.0.0.1", "--server.port=0", "--spring.config.import=",
-    `--spring.datasource.url=jdbc:h2:file:${path.join(work, "data").replaceAll("\\", "/")};MODE=PostgreSQL`,
+    `--spring.datasource.url=jdbc:h2:file:${path.join(work, "data").replaceAll("\\", "/")};MODE=PostgreSQL;WRITE_DELAY=0`,
     "--spring.datasource.driver-class-name=org.h2.Driver", "--spring.datasource.username=sa", "--spring.datasource.password=",
     "--spring.ai.openai.api-key=offline-fixture", "--spring.ai.openai.chat.model=offline-fixture",
     `--spring.ai.openai.base-url=http://127.0.0.1:${provider.address().port}`,

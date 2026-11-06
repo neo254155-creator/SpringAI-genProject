@@ -73,6 +73,7 @@ public class InterviewService {
             question = chatClient.prompt(prompt)
                     .call().content();
         } catch (RuntimeException exception) {
+            if (exception instanceof com.first.genProject.exception.InvalidInputException invalid) throw invalid;
             throw new AiProviderException(exception);
         }
         if (question == null || question.isBlank()) {

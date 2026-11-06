@@ -38,6 +38,7 @@ public class AIServiceImpl implements AiService {
             response = chatClient.prompt(prompt)
                     .call().content();
         } catch (RuntimeException exception) {
+            if (exception instanceof com.first.genProject.exception.InvalidInputException invalid) throw invalid;
             throw new AiProviderException(exception);
         }
         if (response == null || response.isBlank()) {

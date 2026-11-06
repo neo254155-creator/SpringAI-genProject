@@ -19,7 +19,7 @@ export class ResumeInterviewSetup extends HTMLElement {
   <form id="extract-form"><div class="source-choice"><label><input type="radio" name="source" value="file" checked> Upload a file</label><label><input type="radio" name="source" value="text"> Paste résumé text</label></div>
    <div id="file-source"><label class="upload-zone" for="resume-file"><span class="upload-symbol">↑</span><strong>Choose your résumé</strong><span>DOCX, TXT, or Markdown · up to 1 MiB</span><input id="resume-file" type="file" accept=".docx,.txt,.md" required></label><p class="hint">PDF and scanned images are not supported yet. You can copy text from your PDF into the Paste résumé text option.</p></div>
    <div id="text-source" hidden><label for="resume-text">Résumé text</label><textarea id="resume-text" maxlength="24000" rows="10" placeholder="Paste your résumé, including technical skills and project experience…" disabled></textarea><p class="hint">Up to 24,000 characters. No preset Java or Spring Boot skill list.</p></div>
-   <p class="hint">Your résumé text is sent to the configured AI provider for skill extraction. The app saves the filename and extracted skill excerpts, not the original file or full résumé text. Saved résumé skill excerpts belong to your account.</p>
+   <p class="hint">Long résumés are shortened locally to relevant source lines before skill extraction. The selected résumé text is sent to the configured AI provider. The app saves the filename and extracted skill excerpts, not the original file or full résumé text. Saved résumé skill excerpts belong to your account.</p>
    <button id="extract" type="submit">Extract my technical skills →</button>
   </form>
   <p id="status" role="status"></p><p id="error" role="alert" hidden></p>
@@ -219,6 +219,7 @@ export class ResumeInterviewSetup extends HTMLElement {
       await action(controller.signal);
       if (this.#el("status")) this.#el("status").textContent = success;
     } catch (error) {
+      this.#el("status").textContent = "Extraction or setup could not finish.";
       this.#showError(
         controller.signal.aborted
           ? "Stopped waiting. The server may still complete this request. You can retry or reopen the saved session."

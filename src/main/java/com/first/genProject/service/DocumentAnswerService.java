@@ -48,13 +48,14 @@ public class DocumentAnswerService {
         try {
             String evidence = json.writeValueAsString(Map.of("query", retrieved.query(),
                     "passages", retrieved.matches().stream().map(p -> Map.of(
-                            "passageId", p.passageId(), "number", p.number(), "text", p.text())).toList()));
+                            "passageId", p.passageId(), "number", p.number(), "text", InputSummary.shorten(p.text(), 500))).toList()));
             var prompt = new Prompt(system.createMessage(Map.of("format", converter.getFormat())),
                     user.createMessage(Map.of("evidence", evidence)));
             String output = chat.prompt(prompt).call().content();
             if (output == null || output.isBlank() || output.length() > 16000) throw new AiProviderException();
             generated = converter.convert(output);
         } catch (RuntimeException exception) {
+            if (exception instanceof com.first.genProject.exception.InvalidInputException invalid) throw invalid;
             throw new AiProviderException(exception);
         }
 

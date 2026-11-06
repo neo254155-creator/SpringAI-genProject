@@ -10,6 +10,11 @@ import org.springframework.context.annotation.Configuration;
 public class ChatOptionsConfig {
 
     @Bean
+    public ChatClient guardedChatClient(ChatClient.Builder builder,
+            @Value("${spring.ai.openai.chat.model}") String model, com.first.genProject.service.AiQuota quota) {
+        return chatClient(builder.defaultAdvisors(new QuotaAdvisor(quota)), model);
+    }
+
     public ChatClient chatClient(ChatClient.Builder builder,
             @Value("${spring.ai.openai.chat.model}") String model) {
         return builder.defaultOptions(OpenAiChatOptions.builder()

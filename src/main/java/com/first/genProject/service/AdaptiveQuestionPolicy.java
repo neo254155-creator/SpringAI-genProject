@@ -8,7 +8,7 @@ import com.first.genProject.dto.*;
 @Component
 public class AdaptiveQuestionPolicy {
     public Plan plan(InterviewFeedback feedback, List<String> recentQuestions) {
-        if (feedback == null) return new Plan(null, "", List.of(), List.copyOf(recentQuestions));
+        if (feedback == null) return new Plan(null, "", List.of(), recentQuestions.stream().limit(5).map(q -> InputSummary.shorten(q, 500)).toList());
         var rubric = feedback.rubric();
         var weakest = new Criterion("correctness", rubric.correctness(), 5);
         for (var candidate : List.of(new Criterion("completeness", rubric.completeness(), 3),
@@ -19,12 +19,12 @@ public class AdaptiveQuestionPolicy {
             }
         }
         if (weakest.value().score() == weakest.maximum()) {
-            return new Plan(null, "", List.of(), List.copyOf(recentQuestions));
+            return new Plan(null, "", List.of(), recentQuestions.stream().limit(5).map(q -> InputSummary.shorten(q, 500)).toList());
         }
         var focus = new QuestionFocus(weakest.name(), "Practise " + weakest.name() + " ("
                 + weakest.value().score() + "/" + weakest.maximum() + ") from your latest saved feedback.");
         return new Plan(focus, shorten(weakest.value().reason(), 300), feedback.missingPoints().stream()
-                .limit(3).map(point -> shorten(point, 200)).toList(), List.copyOf(recentQuestions));
+                .limit(3).map(point -> shorten(point, 200)).toList(), recentQuestions.stream().limit(5).map(q -> InputSummary.shorten(q, 500)).toList());
     }
 
     private String shorten(String value, int length) {

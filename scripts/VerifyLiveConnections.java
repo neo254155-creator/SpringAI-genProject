@@ -85,7 +85,7 @@ class VerifyLiveConnections {
                 var required = Set.of("interview_sessions", "interview_questions", "interview_answers", "interview_feedback",
                         "feedback_correct_points", "feedback_missing_points", "study_documents", "study_passages",
                         "document_search_indexes", "resume_profiles", "flyway_schema_history", "request_replays",
-                        "app_users", "account_bootstrap", "spring_session", "spring_session_attributes");
+                        "app_users", "account_bootstrap", "spring_session", "spring_session_attributes", "ai_quotas");
                 if (!found.containsAll(required)) throw new SchemaProblem("Expected application tables or Flyway history are missing; no migrations were run.");
                 Set<String> versions = new HashSet<>();
                 try (var rows = statement.executeQuery("SELECT version, success FROM flyway_schema_history")) {
@@ -94,8 +94,8 @@ class VerifyLiveConnections {
                         versions.add(rows.getString(1));
                     }
                 }
-                if (!versions.containsAll(Set.of("1", "2", "3", "4", "5", "6", "7", "8"))) {
-                    throw new SchemaProblem("Expected successful Flyway versions V1 through V8; no migrations were run.");
+                if (!versions.containsAll(Set.of("1", "2", "3", "4", "5", "6", "7", "8", "9"))) {
+                    throw new SchemaProblem("Expected successful Flyway versions V1 through V9; no migrations were run.");
                 }
                 Set<String> columns = new HashSet<>();
                 try (var rows = statement.executeQuery("SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'interview_questions'")) {
@@ -113,7 +113,7 @@ class VerifyLiveConnections {
                 }
             } finally { connection.rollback(); }
         }
-        return "JDBC connection, read access, expected tables, V1-V8 history, and resume/ownership columns checked without writes.";
+        return "JDBC connection, read access, expected tables, V1-V9 history, and resume/ownership columns checked without writes.";
     }
 
     private String groq() throws Exception {

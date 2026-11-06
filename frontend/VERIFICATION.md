@@ -1,5 +1,11 @@
 # Frontend verification
 
+## Quota/input protection — 2026-11-06
+
+- 185 default backend tests and 56 client tests passed, including shared quota/concurrency/failure/reset checks, guarded chat/embedding fixtures, source summaries, and 413 rejection without a retry key.
+- Packaged production browser flow passed with six local fixture requests, including quota recovery and JDBC restart. An initial abrupt-restart check lost a recent H2 login; the test URL now explicitly uses WRITE_DELAY=0 (H2 defaults to 500ms). See https://h2database.com/html/commands.html#set_write_delay.
+- Neon V9 migrated successfully. No live Groq/Gemini requests ran for this task; hosted generation still needs an explicit quota-conscious check.
+
 ## UI cleanup — 2026-11-05
 
 - Removed decorative badges, sample metrics and internal setup/roadmap copy. Homepage/login passed at 1440/390/320px; 56 client tests and the résumé browser journey passed with fixtures. No live AI calls.

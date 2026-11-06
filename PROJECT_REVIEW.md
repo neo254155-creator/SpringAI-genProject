@@ -1,3 +1,21 @@
+## Full-flow review — 2026-11-06
+
+Checked login/ownership/CSRF, résumé reading and extraction, confirmed skills/difficulty, questions, rubric feedback, weakness practice, history/progress, notes/indexing/search, retries, production sessions, configuration and deployment.
+
+| Priority | Finding | Status / next action |
+| --- | --- | --- |
+| High | Extraction rejects an entire result when AI paraphrases evidence for a skill actually present in the résumé. All failures previously shared one message. | Implemented: recover the literal whole skill from source text, reject unsupported names, classify errors and log only a safe category. Exact cause of the original hosted failure remains unconfirmed. |
+| High | Authenticated AI endpoints have no shared per-account usage budget; login throttling does not protect Groq/Gemini quota. | Implemented shared daily request/character budgets and per-account concurrency (V9); configurable defaults in VERCEL.md. |
+| Medium | Live homepage took 13.01 seconds; browser configuration/CSRF/account reads use 10-second timeouts. | Reduce cold-start impact and align timeouts. The timeout mismatch is a risk, not a reproduced failure in this run. |
+| Medium | RUNNING/UNKNOWN retry records can remain blocked indefinitely after interruption; stored response copies have no cleanup policy. | Add safe reconciliation/retention without blindly repeating paid AI calls. |
+| Low | Question Bank remains a placeholder; settings and résumé pages still contain some template/internal copy. | Hide the unused entry and finish essential-page cleanup. |
+
+Verification: 176 backend tests passed and JAR packaged; 56 client tests and résumé/notes fixture browser checks passed. Real browser → packaged app → file-backed database passed the production JDBC profile, account isolation, quota recovery and process restart (six local AI fixture calls). No new live AI requests in this review.
+Live checks: homepage/assets/configuration returned 200; anonymous /auth/me returned 401. UI commit 400893f is deployed and its updated landing script is served. Extraction/quota fixes are included in the current two-task release.
+Earlier diagnostic: one synthetic direct Groq request returned 200 and paraphrased evidence; it used a simplified diagnostic prompt and local saved credentials, not the exact deployed request. It does not establish the original incident's cause. Gemini and hosted generation were not re-tested. H2 checks do not prove every PostgreSQL or provider behavior. This is a scoped review, not a guarantee of no remaining bugs.
+
+## Earlier review (historical)
+
 # Project review — 2026-10-24
 
 This describes the checked-in source and the foundation follow-up in this change.

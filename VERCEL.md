@@ -79,3 +79,11 @@ docker build -f Dockerfile.vercel -t genproject .
 Official platform documentation:
 https://vercel.com/kb/guide/does-vercel-support-docker-deployments
 https://docs.spring.io/spring-session/reference/configuration/jdbc.html
+
+## AI quotas and bounded inputs (V9)
+
+Run reviewed V9 before releasing this version; Vercel keeps startup Flyway disabled. V9 was applied to Neon on 2026-11-06.
+
+Optional environment overrides: `AI_ACCOUNT_DAILY_REQUESTS` (30), `AI_GLOBAL_DAILY_REQUESTS` (200), `AI_ACCOUNT_DAILY_CHARACTERS` (120000), `AI_GLOBAL_DAILY_CHARACTERS` (800000). These are application safeguards, not the provider’s remaining balance or token meter. Combined Groq/Gemini attempts, including failures, count; UTC midnight resets the daily counters. One AI call per account runs at a time across instances. A crashed process leaves a conservative 15-minute lease. Successful retries replayed from storage do not consume another attempt.
+
+JSON bodies are capped at 128 KiB; chat prompts at 20000 characters. Existing field limits remain (résumé 24000, answers/chat 8000, queries 2000). Long résumés use locally selected source lines up to 12000 characters; omitted details may require a shorter résumé. Follow-up context and note evidence are bounded; submitted answers stay intact. Embeddings use at most 16 texts/20000 characters per call. Chat timeout is 90 seconds, output cap 1000 tokens, SDK retries remain disabled.

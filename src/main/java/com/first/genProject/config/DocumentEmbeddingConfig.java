@@ -10,6 +10,16 @@ import com.first.genProject.exception.DocumentSearchException;
 @Configuration(proxyBeanMethods = false)
 public class DocumentEmbeddingConfig {
     @Bean
+    public PassageEmbeddingClient guardedEmbeddingClient(
+            @Value("${document-search.embedding.enabled:false}") boolean enabled,
+            @Value("${document-search.embedding.provider:openai-compatible}") String provider,
+            @Value("${document-search.embedding.base-url:}") String baseUrl,
+            @Value("${document-search.embedding.model:}") String model,
+            @Value("${document-search.embedding.api-key:}") String apiKey,
+            com.first.genProject.service.AiQuota quota) {
+        var delegate=passageEmbeddingClient(enabled,provider,baseUrl,model,apiKey);
+        return enabled ? new QuotaEmbeddingClient(delegate,quota) : delegate;
+    }
     public PassageEmbeddingClient passageEmbeddingClient(
             @Value("${document-search.embedding.enabled:false}") boolean enabled,
             @Value("${document-search.embedding.provider:openai-compatible}") String provider,

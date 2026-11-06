@@ -35,27 +35,40 @@ public class ResumeService {
         final List<ResumeSkill> skills;
         try {
             String output = chat.prompt(new Prompt(system.createMessage(Map.of("format", converter.getFormat())),
-                    user.createMessage(Map.of("resumeText", text)))).call().content();
-            if (output == null || output.isBlank()) throw new AiProviderException();
-            var result = converter.convert(output);
+                    user.createMessage(Map.of("resumeText", com.first.genProject.service.InputSummary.resume(text))))).call().content();
+            if (output == null || output.isBlank()) throw invalidResponse(null);
+            final ExtractedSkills result;
+            try { result = converter.convert(output); }
+            catch (RuntimeException malformed) { throw invalidResponse(malformed); }
             skills = verifySkills(text, result == null ? null : result.skills());
-        } catch (RuntimeException exception) { throw new AiProviderException(exception); }
+        } catch (RuntimeException exception) {
+            if (exception instanceof com.first.genProject.exception.InvalidInputException invalid) throw invalid; throw new AiProviderException(exception); }
         // The raw file/full resume text is not persisted; only validated skill excerpts are saved.
         return store.save(filename, skills);
     }
+    private static AiProviderException invalidResponse(Throwable cause) {
+        return new AiProviderException(AiProviderException.Reason.INVALID_RESPONSE, cause);
+    }
     public static List<ResumeSkill> verifySkills(String text, List<ResumeSkill> skills) {
-        if (skills == null || skills.size() > 12) throw new AiProviderException();
+        if (skills == null || skills.size() > 12) throw invalidResponse(null);
         var names = new HashSet<String>();
         var verified = new ArrayList<ResumeSkill>();
+        String source = text.strip().replaceAll("\\s+", " ");
         String normalizedText = normalize(text);
         for (var skill : skills) {
-            if (skill == null || skill.name() == null || skill.evidence() == null) throw new AiProviderException();
+            if (skill == null || skill.name() == null || skill.evidence() == null) throw invalidResponse(null);
             String name = skill.name().strip(), evidence = skill.evidence().strip();
             if (name.isBlank() || name.length() > 80 || evidence.isBlank() || evidence.length() > 240
-                    || name.chars().anyMatch(Character::isISOControl)
-                    || !names.add(normalize(name)) || !normalizedText.contains(normalize(evidence))
-                    || !Pattern.compile("(?<![\\p{L}\\p{N}+#])" + Pattern.quote(normalize(name)) + "(?![\\p{L}\\p{N}+#])")
-                            .matcher(normalize(evidence)).find()) throw new AiProviderException();
+                    || name.chars().anyMatch(Character::isISOControl) || !names.add(normalize(name)))
+                throw invalidResponse(null);
+            var pattern = Pattern.compile("(?<![\\p{L}\\p{N}+#])" + Pattern.quote(name) + "(?![\\p{L}\\p{N}+#])",
+                    Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+            var match = pattern.matcher(source);
+            if (!match.find()) throw invalidResponse(null);
+            // A model may paraphrase its excerpt. Recover only the literal skill from
+            // the source; never accept the invented excerpt or infer another skill.
+            if (!normalizedText.contains(normalize(evidence)) || !pattern.matcher(evidence).find())
+                evidence = source.substring(match.start(), match.end());
             verified.add(new ResumeSkill(name, evidence));
         }
         return List.copyOf(verified);

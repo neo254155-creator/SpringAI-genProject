@@ -66,6 +66,7 @@ public class InterviewFeedbackService {
             }
             evaluation = converter.convert(output);
         } catch (RuntimeException exception) {
+            if (exception instanceof com.first.genProject.exception.InvalidInputException invalid) throw invalid;
             throw new AiProviderException(exception);
         }
         if (evaluation == null || evaluation.rubric() == null

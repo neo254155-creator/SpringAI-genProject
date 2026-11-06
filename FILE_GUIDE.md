@@ -64,7 +64,7 @@ Local-only files: `.idea/workspace.xml` holds IntelliJ run settings;
 | File | Purpose |
 | --- | --- |
 | `src/main/java/com/first/genProject/Controller/AIController.java` | Exposes general coding-chat endpoints. |
-| `src/main/java/com/first/genProject/Controller/ApiExceptionHandler.java` | Returns safe, consistent API error responses. |
+| `src/main/java/com/first/genProject/Controller/ApiExceptionHandler.java` | Returns safe API errors and logs AI failure categories without provider content. |
 | `src/main/java/com/first/genProject/Controller/DocumentAnswerController.java` | Exposes answers backed by note passages. |
 | `src/main/java/com/first/genProject/Controller/DocumentSearchController.java` | Exposes note indexing and semantic search. |
 | `src/main/java/com/first/genProject/Controller/FrontendConfigController.java` | Returns the public API address without secrets. |
@@ -131,7 +131,7 @@ Local-only files: `.idea/workspace.xml` holds IntelliJ run settings;
 | `src/main/java/com/first/genProject/resume/ResumeInterviewContext.java` | Carries the confirmed skill snapshot for an interview. |
 | `src/main/java/com/first/genProject/resume/ResumeProfile.java` | Carries a saved résumé profile and extracted skills. |
 | `src/main/java/com/first/genProject/resume/ResumeRepository.java` | Queries and saves résumé profiles. |
-| `src/main/java/com/first/genProject/resume/ResumeService.java` | Extracts grounded skills and starts confirmed-skill interviews. |
+| `src/main/java/com/first/genProject/resume/ResumeService.java` | Extracts skills, recovers literal source evidence, and starts confirmed-skill interviews. |
 | `src/main/java/com/first/genProject/resume/ResumeSessionRequest.java` | Carries selected skills and difficulty for interview start. |
 | `src/main/java/com/first/genProject/resume/ResumeSkill.java` | Carries one extracted skill and its source excerpt. |
 | `src/main/java/com/first/genProject/resume/ResumeStore.java` | Saves and retrieves the current account’s résumé profiles. |
@@ -238,7 +238,7 @@ Local-only files: `.idea/workspace.xml` holds IntelliJ run settings;
 | `src/test/java/com/first/genProject/persistence/InterviewPersistenceTest.java` | Runs the persistence contract on H2. |
 | `src/test/java/com/first/genProject/persistence/PostgresPersistenceTest.java` | Runs that contract on disposable Docker PostgreSQL. |
 | `src/test/java/com/first/genProject/persistence/RequestReplayTest.java` | Checks durable retries, concurrency and SDK attempt counts. |
-| `src/test/java/com/first/genProject/resume/ResumeTextReaderTest.java` | Checks resume text reader behavior using offline fixtures. |
+| `src/test/java/com/first/genProject/resume/ResumeTextReaderTest.java` | Tests résumé reading, whole-skill grounding and paraphrased-evidence recovery. |
 | `src/test/java/com/first/genProject/service/AIServiceImplTest.java` | Checks aiservice impl behavior using offline fixtures. |
 | `src/test/java/com/first/genProject/service/AdaptiveQuestionPolicyTest.java` | Checks adaptive question policy behavior using offline fixtures. |
 | `src/test/java/com/first/genProject/service/DocumentAnswerServiceTest.java` | Checks document answer service behavior using offline fixtures. |
@@ -248,3 +248,15 @@ Local-only files: `.idea/workspace.xml` holds IntelliJ run settings;
 | `src/test/java/com/first/genProject/support/FeedbackFixtures.java` | Provides reusable valid model-feedback JSON. |
 | `src/test/java/com/first/genProject/support/StubChatModel.java` | Substitutes deterministic responses for live AI. |
 | `src/test/resources/application-test.properties` | Uses H2 and disables live embeddings in tests. |
+
+## Quota and input protection
+
+| File | Purpose |
+| --- | --- |
+| `src/main/java/com/first/genProject/service/AiQuota.java` | Reserves shared daily request/input budgets and prevents concurrent AI requests per account. |
+| `src/main/java/com/first/genProject/config/QuotaAdvisor.java` | Checks prompt length and quota before shared chat-provider calls. |
+| `src/main/java/com/first/genProject/config/InputLengthFilter.java` | Rejects oversized JSON bodies before parsing, including requests without retry keys. |
+| `src/main/java/com/first/genProject/embedding/QuotaEmbeddingClient.java` | Splits embeddings into bounded batches and checks quota before each provider call. |
+| `src/main/java/com/first/genProject/service/InputSummary.java` | Selects résumé source lines locally and bounds practice context without AI calls. |
+| `src/main/resources/db/migration/V9__ai_quotas.sql` | Creates persistent counters and leases shared by deployment instances. |
+| `src/test/java/com/first/genProject/service/AiQuotaTest.java` | Checks shared budgets, concurrency, failures, resets, batching and summaries offline. |

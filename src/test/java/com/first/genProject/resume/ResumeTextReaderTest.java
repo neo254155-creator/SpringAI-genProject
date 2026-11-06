@@ -50,6 +50,31 @@ class ResumeTextReaderTest {
         assertEquals("Python", ResumeService.verifySkills("Built with Python\nand SQL", List.of(new ResumeSkill("Python", "with Python and SQL"))).getFirst().name());
         assertTrue(ResumeService.verifySkills("No technical skills.", List.of()).isEmpty());
     }
+    @Test
+    void repairsParaphrasedEvidenceOnlyForAnExactSkillInTheSource() {
+        var skills = ResumeService.verifySkills("Built with Python, PostgreSQL and Docker.", List.of(
+                new ResumeSkill("PostgreSQL", "Built with PostgreSQL"),
+                new ResumeSkill("Docker", "Built with Docker")));
+        assertEquals("PostgreSQL", skills.get(0).evidence());
+        assertEquals("Docker", skills.get(1).evidence());
+        assertThrows(AiProviderException.class, () -> ResumeService.verifySkills("JavaScript C++ C#",
+                List.of(new ResumeSkill("Java", "Java"))));
+        assertThrows(AiProviderException.class, () -> ResumeService.verifySkills("JavaScript C++ C#",
+                List.of(new ResumeSkill("C", "C"))));
+    }
+    @Test
+    void classifiesSdkFailuresWithoutExposingPrivateMessages() {
+        var upstream = org.mockito.Mockito.mock(com.openai.errors.OpenAIServiceException.class);
+        org.mockito.Mockito.when(upstream.statusCode()).thenReturn(429);
+        assertEquals(AiProviderException.Reason.RATE_LIMIT,
+                new AiProviderException(new IllegalStateException("private details", upstream)).reason());
+        org.mockito.Mockito.when(upstream.statusCode()).thenReturn(401);
+        var denied = new AiProviderException(upstream);
+        assertEquals(AiProviderException.Reason.AUTHENTICATION, denied.reason());
+        assertFalse(denied.getMessage().contains("private"));
+        assertEquals(AiProviderException.Reason.TIMEOUT,
+                new AiProviderException(new java.net.SocketTimeoutException("private details")).reason());
+    }
     private MockMultipartFile docx(String xml) throws Exception {
         var bytes = new ByteArrayOutputStream();
         try (var zip = new ZipOutputStream(bytes)) {

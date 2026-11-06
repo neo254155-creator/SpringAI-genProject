@@ -26,6 +26,10 @@ Main flow: upload résumé → confirm extracted skills → choose difficulty �
 
 - 2026-11-05: removed decorative badges, invented preview metrics, promotional filler and internal setup/roadmap notes; kept real statuses and privacy details. No new project files or AI calls.
 
+- 2026-11-06: reviewed the full flow; fixed grounded-excerpt recovery, safe AI error reasons and stale loading text locally. 176 backend/56 client tests and production restart journey passed; SDK quota/auth/timeout checks also passed. See PROJECT_REVIEW.md.
+
+- 2026-11-06: added shared account/site AI budgets, V9, bounded inputs/batches and local source summaries. 185 backend/56 client tests passed; no live AI calls.
+
 ## Verification
 
 - Backend: 173 offline tests passed; JAR packaging and Neon V6–V8/cookie/CSRF checks passed. The first account owns the two existing sessions; no unowned résumés, sessions or notes remain.
@@ -41,5 +45,5 @@ Extra memory, AI tools, study-task management and note integration are deferred.
 ## Working agreement
 
 Keep task notes brief. Commit and push after every two completed tasks.
-Batch complete: deployment + UI copy cleanup; reviewed and committed together.
+Batch complete: extraction fix + quota/input protection; reviewed and pushed together.
 Keep [FILE_GUIDE.md](FILE_GUIDE.md) current as files change; this log stays brief.

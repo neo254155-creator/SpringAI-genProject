@@ -30,7 +30,15 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(AiProviderException.class)
     public ProblemDetail providerFailure(AiProviderException exception) {
-        return problem(HttpStatus.BAD_GATEWAY, "AI_PROVIDER_ERROR", exception.getMessage());
+        org.slf4j.LoggerFactory.getLogger(ApiExceptionHandler.class).warn("AI request failed: reason={}", exception.reason());
+        var status = switch (exception.reason()) {
+            case QUOTA_LIMIT, BUSY -> HttpStatus.TOO_MANY_REQUESTS;
+            case STORAGE_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            default -> HttpStatus.BAD_GATEWAY;
+        };
+        var result = problem(status, "AI_PROVIDER_ERROR", exception.getMessage());
+        result.setProperty("reason", exception.reason().name());
+        return result;
     }
 
     @ExceptionHandler(InterviewNotFoundException.class)

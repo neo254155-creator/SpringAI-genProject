@@ -137,6 +137,36 @@ class GenProjectApplicationTests {
     }
 
     @Test
+    void oversizeJsonIsRejectedBeforeAiWithoutAnIdempotencyKey() throws Exception {
+        mvc.perform(post("/chat").contentType(MediaType.APPLICATION_JSON).content("{\"message\":\""+"x".repeat(131073)+"\"}"))
+                .andExpect(status().isPayloadTooLarge()).andExpect(jsonPath("$.code").value("INPUT_TOO_LARGE"));
+        mvc.perform(post("/chat").contentType("application/vnd.intervie+json").content("x".repeat(131073)))
+                .andExpect(status().isPayloadTooLarge());
+        assertEquals(0,stub.calls);
+    }
+    @Test
+    void resumeRepairsParaphrasedEvidenceWithoutAnotherProviderCall() throws Exception {
+        stub.response = "{\"skills\":[{\"name\":\"Docker\",\"evidence\":\"Built with Docker\"}]}";
+        mvc.perform(post("/resumes/text").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"text\":\"Built with Python, PostgreSQL and Docker.\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.skills[0].evidence").value("Docker"));
+        assertEquals(1, stub.calls);
+    }
+    @Test
+    void resumeInvalidOutputAndQuotaHaveDistinctSafeReasons() throws Exception {
+        stub.response = "{\"skills\":[{\"name\":\"InventedSkill\",\"evidence\":\"private invented text\"}]}";
+        mvc.perform(post("/resumes/text").contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"Python\"}"))
+                .andExpect(status().isBadGateway()).andExpect(jsonPath("$.reason").value("INVALID_RESPONSE"));
+        stub.failure = new IllegalStateException("private key", new org.springframework.web.client.HttpClientErrorException(
+                org.springframework.http.HttpStatus.TOO_MANY_REQUESTS, "private upstream body"));
+        var response = mvc.perform(post("/resumes/text").contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"Python\"}"))
+                .andExpect(status().isBadGateway()).andExpect(jsonPath("$.code").value("AI_PROVIDER_ERROR"))
+                .andExpect(jsonPath("$.reason").value("RATE_LIMIT")).andReturn().getResponse().getContentAsString();
+        assertFalse(response.contains("private"));
+        assertEquals(2, stub.calls);
+    }
+
+    @Test
     void providerFailureHasSafeProblemResponse() throws Exception {
         stub.failure = new IllegalStateException("private provider details");
         mvc.perform(get("/chat").param("q", "Explain Java"))

@@ -9,7 +9,8 @@ import com.first.genProject.exception.DocumentSearchException;
 
 class DocumentEmbeddingConfigTest {
     private final ApplicationContextRunner context = new ApplicationContextRunner()
-            .withUserConfiguration(DocumentEmbeddingConfig.class);
+            .withUserConfiguration(DocumentEmbeddingConfig.class)
+            .withBean(com.first.genProject.service.AiQuota.class, () -> org.mockito.Mockito.mock(com.first.genProject.service.AiQuota.class));
 
     @Test
     void disabledFeatureStartsWithoutProviderCredentials() {
@@ -24,7 +25,7 @@ class DocumentEmbeddingConfigTest {
         context.withPropertyValues("document-search.embedding.enabled=true",
                 "document-search.embedding.provider=openai-compatible", "document-search.embedding.base-url=https://generativelanguage.googleapis.com/v1beta/openai",
                 "document-search.embedding.model=model", "document-search.embedding.api-key=test-key")
-                .run(c -> assertInstanceOf(HostedPassageEmbeddingClient.class, c.getBean(PassageEmbeddingClient.class)));
+                .run(c -> assertInstanceOf(QuotaEmbeddingClient.class, c.getBean(PassageEmbeddingClient.class)));
     }
 
     @Test
