@@ -9,7 +9,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.web.util.ContentCachingResponseWrapper;
+import org.springframework.security.web.util.OnCommittedResponseWrapper;
 
 /** Only account-independent public files may be cached. APIs and private HTML keep security defaults. */
 @Component
@@ -26,17 +26,20 @@ public class PublicAssetCacheFilter extends OncePerRequestFilter {
     }
     protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain)
             throws IOException,ServletException {
-        var captured=new ContentCachingResponseWrapper(response);
-        try {
-            chain.doFilter(request,captured);
-            if (captured.getStatus()==200 && !captured.containsHeader("Set-Cookie")) {
+        // Do not buffer static bodies: servlet welcome-page forwards can reset a
+        // buffered response and erase the homepage. Apply headers at commitment.
+        var wrapped=new OnCommittedResponseWrapper(response) {
+            protected void onResponseCommitted() { apply(); }
+            void apply() {
+                if (isCommitted() || getStatus()!=200 || containsHeader("Set-Cookie")) return;
                 String path=request.getRequestURI().substring(request.getContextPath().length());
                 int ttl=PAGES.contains(path)?3600:86400;
-                // Browsers revalidate stable asset URLs; Vercel can serve its cached copy.
-                captured.setHeader("Cache-Control","public, max-age=0, must-revalidate");
-                captured.setHeader("Vercel-CDN-Cache-Control","public, max-age="+ttl+", stale-while-revalidate=86400");
-                captured.setHeader("Pragma",null);captured.setHeader("Expires",null);
+                setHeader("Cache-Control","public, max-age=0, must-revalidate");
+                setHeader("Vercel-CDN-Cache-Control","public, max-age="+ttl+", stale-while-revalidate=86400");
+                setHeader("Pragma",null);setHeader("Expires",null);
             }
-        } finally { captured.copyBodyToResponse(); }
+        };
+        chain.doFilter(request,wrapped);
+        wrapped.apply();
     }
 }

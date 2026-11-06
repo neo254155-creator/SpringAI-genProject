@@ -55,6 +55,15 @@ class AccountSecurityTest {
                 .andExpect(header().doesNotExist("Vercel-CDN-Cache-Control"));
         assertEquals(0,model.calls);
     }
+    @Test void cacheWrapperPreservesForwardedResponseBodies() throws Exception {
+        var response=new MockHttpServletResponse();
+        new com.first.genProject.config.PublicAssetCacheFilter().doFilter(
+                new MockHttpServletRequest("GET","/"),response,(req,res)->{
+                    res.resetBuffer();res.getWriter().write("<html>forwarded homepage</html>");res.flushBuffer();
+                });
+        assertEquals("<html>forwarded homepage</html>",response.getContentAsString());
+        assertNotNull(response.getHeader("Vercel-CDN-Cache-Control"));
+    }
     @Test void publicFileErrorsAndCookieResponsesAreNeverMarkedCacheable() throws Exception {
         for (int code:List.of(200,302,500)) {
             var request=new MockHttpServletRequest("GET","/login.html");

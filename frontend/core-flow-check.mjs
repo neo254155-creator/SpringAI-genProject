@@ -108,6 +108,11 @@ try {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await context.route("**/*", route => route.request().url().startsWith(origin + "/") ? route.continue() : route.abort());
   page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
+  stage = "public homepage body and rendering";
+  const home = await page.goto(origin + "/", { waitUntil: "domcontentloaded" });
+  assert.equal(home.status(), 200);
+  await page.locator(".hero h1").waitFor();
+  assert.ok((await home.text()).includes("/ui/landing.js"), "Welcome-page forward must retain its HTML body");
   assert.equal((await page.request.get(origin + "/interview/sessions")).status(), 401);
   assert.equal((await page.request.post(origin + "/auth/register", { data: {} })).status(), 403);
   stage = "registration and real session cookie";

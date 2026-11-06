@@ -47,5 +47,5 @@ Extra memory, AI tools, study-task management and note integration are deferred.
 ## Working agreement
 
 Keep task notes brief. Commit and push after every two completed tasks.
-User requested deployment now: release the reviewed loading/cache fix before the next task.
+User-requested release: loading/cache changes committed; release checks caught and corrected a welcome-page forwarding bug.
 Keep [FILE_GUIDE.md](FILE_GUIDE.md) current as files change; this log stays brief.

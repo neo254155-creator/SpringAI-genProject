@@ -1,5 +1,10 @@
 # Frontend verification
 
+## Welcome-page release correction — 2026-11-06
+
+- Live browser verification caught an empty `/` response from buffering the servlet welcome-page forward. Rolled back the affected deployment, then replaced buffering with headers applied on response commitment.
+- Added forwarded-body and real packaged-homepage rendering regressions; 13 targeted security/cache tests, JAR packaging and the packaged production browser journey/restart passed. Existing client checks passed 57 tests. Repeat live browser/cache checks after promotion; no live AI generation is needed.
+
 ## Loading/cache preparation — 2026-11-06
 
 - 12 targeted account/security/cache tests and 57 client tests passed; JAR packaging passed. Public files receive cache headers; APIs/private HTML/auth redirects/missing files, cookie responses, errors and Authorization/Range requests do not.
