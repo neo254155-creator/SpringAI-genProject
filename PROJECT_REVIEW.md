@@ -6,7 +6,7 @@ Checked login/ownership/CSRF, résumé reading and extraction, confirmed skills/
 | --- | --- | --- |
 | High | Extraction rejects an entire result when AI paraphrases evidence for a skill actually present in the résumé. All failures previously shared one message. | Implemented: recover the literal whole skill from source text, reject unsupported names, classify errors and log only a safe category. Exact cause of the original hosted failure remains unconfirmed. |
 | High | Authenticated AI endpoints have no shared per-account usage budget; login throttling does not protect Groq/Gemini quota. | Implemented shared daily request/character budgets and per-account concurrency (V9); configurable defaults in VERCEL.md. |
-| Medium | Live homepage took 13.01 seconds; browser configuration/CSRF/account reads use 10-second timeouts. | Reduce cold-start impact and align timeouts. The timeout mismatch is a risk, not a reproduced failure in this run. |
+| Medium | Live homepage took 13.01 seconds; browser configuration/CSRF/account reads use 10-second timeouts. | Prepared public-file cache headers/preloads and 45-second connection timeouts; targeted tests passed. Deployment/cache-hit timing remains pending. Private requests and cache misses still incur cold starts. |
 | Medium | RUNNING/UNKNOWN retry records can remain blocked indefinitely after interruption; stored response copies have no cleanup policy. | Add safe reconciliation/retention without blindly repeating paid AI calls. |
 | Low | Question Bank remains a placeholder; settings and résumé pages still contain some template/internal copy. | Hide the unused entry and finish essential-page cleanup. |
 

@@ -1,5 +1,11 @@
 # Frontend verification
 
+## Loading/cache preparation — 2026-11-06
+
+- 12 targeted account/security/cache tests and 57 client tests passed; JAR packaging passed. Public files receive cache headers; APIs/private HTML/auth redirects/missing files, cookie responses, errors and Authorization/Range requests do not.
+- A real browser against local HTTP fixtures tolerated 12-second configuration/account/CSRF responses and completed login; cancellation during shared CSRF setup blocks only that caller’s mutation. No live AI calls.
+- Live baseline: homepage 14.04s; CSS 0.88s; configuration 0.72s, all no-store/MISS. Deployment requested by the user; verify deployed HIT/speed after release.
+
 ## Quota/input protection — 2026-11-06
 
 - 185 default backend tests and 56 client tests passed, including shared quota/concurrency/failure/reset checks, guarded chat/embedding fixtures, source summaries, and 413 rejection without a retry key.

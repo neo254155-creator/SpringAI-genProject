@@ -30,6 +30,8 @@ Main flow: upload résumé → confirm extracted skills → choose difficulty �
 
 - 2026-11-06: added shared account/site AI budgets, V9, bounded inputs/batches and local source summaries. 185 backend/56 client tests passed; no live AI calls.
 
+- 2026-11-06: prepared public-file edge caching, module preloads and 45s connection timeouts; 12 security/cache and 57 client tests plus a 12s-delay browser fixture passed. Live speed remains unverified until release.
+
 ## Verification
 
 - Backend: 173 offline tests passed; JAR packaging and Neon V6–V8/cookie/CSRF checks passed. The first account owns the two existing sessions; no unowned résumés, sessions or notes remain.
@@ -45,5 +47,5 @@ Extra memory, AI tools, study-task management and note integration are deferred.
 ## Working agreement
 
 Keep task notes brief. Commit and push after every two completed tasks.
-Batch complete: extraction fix + quota/input protection; reviewed and pushed together.
+User requested deployment now: release the reviewed loading/cache fix before the next task.
 Keep [FILE_GUIDE.md](FILE_GUIDE.md) current as files change; this log stays brief.

@@ -62,3 +62,19 @@ test("legacy GET chat also gets CSRF protection because it can consume provider 
   });
   await fetcher("/chat?q=Python"); assert.equal(protectedRequest, true);
 });
+
+ test("cancelling one caller during shared CSRF setup never sends its mutation", async () => {
+  let release; let mutations = 0, csrfRequests = 0;
+  const pending = new Promise(resolve => release = resolve);
+  const fetcher = createAppFetch(async url => {
+    if(url.endsWith("/auth/csrf")) { csrfRequests++; await pending; return ok(token); }
+    mutations++; return ok({});
+  });
+  const controller = new AbortController();
+  const cancelled = fetcher("/resumes/text", {method:"POST", signal:controller.signal});
+  const surviving = fetcher("/interview/sessions", {method:"POST"});
+  controller.abort();
+  await assert.rejects(cancelled, {name:"AbortError"});
+  assert.equal(mutations,0);release();await surviving;
+  assert.equal(csrfRequests,1);assert.equal(mutations,1);
+ });

@@ -260,3 +260,4 @@ Local-only files: `.idea/workspace.xml` holds IntelliJ run settings;
 | `src/main/java/com/first/genProject/service/InputSummary.java` | Selects résumé source lines locally and bounds practice context without AI calls. |
 | `src/main/resources/db/migration/V9__ai_quotas.sql` | Creates persistent counters and leases shared by deployment instances. |
 | `src/test/java/com/first/genProject/service/AiQuotaTest.java` | Checks shared budgets, concurrency, failures, resets, batching and summaries offline. |
+| `src/main/java/com/first/genProject/config/PublicAssetCacheFilter.java` | Sets edge-cache headers only for successful public HTML and static files; private routes remain uncached. |

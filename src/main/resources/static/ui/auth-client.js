@@ -1,4 +1,4 @@
-import { apiUrl } from "./api-config.js";
+import { apiUrl, CONNECTION_TIMEOUT_MS } from "./api-config.js";
 import { retryKeys } from "./retry-keys.js";
 
 export function safeNext(value) {
@@ -9,6 +9,17 @@ export function safeNext(value) {
       ? url.pathname + url.search : "/practice.html";
   } catch { return "/practice.html"; }
 }
+// A cancelled caller must stop waiting without cancelling another caller's shared CSRF lookup.
+function waitingForToken(promise, signal) {
+  if (!signal) return promise;
+  return new Promise((resolve, reject) => {
+    const abort = () => { cleanup(); reject(signal.reason); };
+    const cleanup = () => signal.removeEventListener("abort", abort);
+    promise.then(value => { cleanup(); resolve(value); }, error => { cleanup(); reject(error); });
+    if (signal.aborted) { abort(); return; }
+    signal.addEventListener("abort", abort, { once: true });
+  });
+}
 export function createAppFetch(fetcher = globalThis.fetch, redirect = () => {
   if (globalThis.location && location.pathname !== "/login.html")
     location.assign("/login.html?next=" + encodeURIComponent(safeNext(location.pathname + location.search)));
@@ -18,7 +29,7 @@ export function createAppFetch(fetcher = globalThis.fetch, redirect = () => {
     if (csrf) return csrf;
     if (!loading) loading = (async () => {
       const response = await fetcher(apiUrl("/auth/csrf"), { credentials: "same-origin",
-        headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) });
+        headers: { Accept: "application/json" }, signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS) });
       if (!response.ok) throw new Error("Could not prepare a secure session. Please try again.");
       const value = await response.json();
       if (!/^X-[A-Za-z0-9-]{1,80}$/.test(value.headerName) || typeof value.token !== "string"
@@ -35,7 +46,9 @@ export function createAppFetch(fetcher = globalThis.fetch, redirect = () => {
     const method = (options.method || "GET").toUpperCase();
     const headers = { ...options.headers };
     if (!["GET", "HEAD", "OPTIONS"].includes(method) || /\/chat(?:$|\?)/.test(url)) {
-      const value = await token(); headers[value.headerName] = value.token;
+      const value = await waitingForToken(token(), options.signal);
+      options.signal?.throwIfAborted();
+      headers[value.headerName] = value.token;
     }
     const response = await fetcher(url, { ...options, headers, credentials: "same-origin" });
     if (response.status === 403) csrf = null;
@@ -53,15 +66,15 @@ async function read(response) {
   if (typeof data.id !== "string" || typeof data.username !== "string") throw new Error("The server returned an invalid account.");
   return data;
 }
-export const currentAccount = () => appFetch(apiUrl("/auth/me"), { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) }).then(read);
+export const currentAccount = () => appFetch(apiUrl("/auth/me"), { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS) }).then(read);
 export async function accountAction(action, credentials) {
-  const result = await read(await appFetch(apiUrl(`/auth/${action}`), { method: "POST", signal: AbortSignal.timeout(20000),
+  const result = await read(await appFetch(apiUrl(`/auth/${action}`), { method: "POST", signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS),
     headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(credentials) }));
   if (action === "login") { retryKeys.clear(); appFetch.resetCsrf(); }
   return result;
 }
 export async function signOut() {
-  const response = await appFetch(apiUrl("/auth/logout"), { method: "POST", signal: AbortSignal.timeout(10000) });
+  const response = await appFetch(apiUrl("/auth/logout"), { method: "POST", signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS) });
   if (!response.ok) throw new Error("Could not confirm sign-out. Please try again.");
   retryKeys.clear(); appFetch.resetCsrf(); location.assign("/login.html");
 }

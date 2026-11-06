@@ -38,6 +38,36 @@ class AccountSecurityTest {
     private final JsonMapper json = JsonMapper.builder().build();
     private static final String PASSWORD = "Offline test password 123!";
 
+    @Test void onlySuccessfulPublicFilesReceiveEdgeCacheHeaders() throws Exception {
+        for (String path:List.of("/", "/index.html", "/login.html", "/privacy.html", "/ui/design.css", "/ui/landing.js", "/resume-setup.js")) {
+            mvc.perform(get(path)).andExpect(status().isOk())
+                    .andExpect(header().string("Cache-Control","public, max-age=0, must-revalidate"))
+                    .andExpect(header().string("Vercel-CDN-Cache-Control",org.hamcrest.Matchers.containsString("max-age=")))
+                    .andExpect(header().doesNotExist("Set-Cookie"));
+        }
+        for (String path:List.of("/auth/me", "/auth/csrf", "/frontend-config", "/dashboard.html", "/interview/sessions", "/ui/missing.js")) {
+            mvc.perform(get(path)).andExpect(header().doesNotExist("Vercel-CDN-Cache-Control"))
+                    .andExpect(header().string("Cache-Control",org.hamcrest.Matchers.containsString("no-store")));
+        }
+        mvc.perform(get("/ui/design.css").header("Authorization","Bearer unused"))
+                .andExpect(header().doesNotExist("Vercel-CDN-Cache-Control"));
+        mvc.perform(get("/ui/design.css").header("Range","bytes=0-10"))
+                .andExpect(header().doesNotExist("Vercel-CDN-Cache-Control"));
+        assertEquals(0,model.calls);
+    }
+    @Test void publicFileErrorsAndCookieResponsesAreNeverMarkedCacheable() throws Exception {
+        for (int code:List.of(200,302,500)) {
+            var request=new MockHttpServletRequest("GET","/login.html");
+            var response=new MockHttpServletResponse();
+            new com.first.genProject.config.PublicAssetCacheFilter().doFilter(request,response,(req,res)->{
+                var http=(jakarta.servlet.http.HttpServletResponse)res;
+                http.setStatus(code);
+                if(code==200)http.addHeader("Set-Cookie","fixture=private; HttpOnly");
+            });
+            assertNull(response.getHeader("Vercel-CDN-Cache-Control"));
+            assertEquals(code,response.getStatus());
+        }
+    }
     @BeforeEach void reset() {
         for (String table : List.of("request_replays", "document_search_indexes", "study_passages", "study_documents",
                 "feedback_correct_points", "feedback_missing_points", "interview_feedback", "interview_answers",

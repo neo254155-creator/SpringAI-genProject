@@ -1,10 +1,12 @@
+// Allow the Java container to wake up; mutations are never retried automatically.
+export const CONNECTION_TIMEOUT_MS = 45000;
 let base = "";
 export function apiUrl(path) {
   return base + path;
 }
 export async function configureApi(fetcher = globalThis.fetch) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
+  const timer = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT_MS);
   let response;
   try {
     response = await fetcher("/frontend-config", {
